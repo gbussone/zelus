@@ -231,15 +231,24 @@ let rec internal_expression ({ e_desc = e_desc } as e) =
      let* e_record = internal_expression e_record in
      return { e with e_desc = Erecord_access (e_record, x) }
   | Erecord l_e_list ->
-     let l_list, e_list = List.split l_e_list in
-     let* e_list = map internal_expression e_list in
-     return { e with e_desc = Erecord (List.combine l_list e_list) }
+     let* l_e_list =
+       map
+         (fun (l, e) ->
+            let* e = internal_expression e in
+            return (l, e))
+         l_e_list
+     in
+     return { e with e_desc = Erecord l_e_list }
   | Erecord_with (e_record, l_e_list) ->
      let* e_record = internal_expression e_record in
-     let l_list, e_list = List.split l_e_list in
-     let* e_list = map internal_expression e_list in
-     return
-       { e with e_desc = Erecord_with (e_record, List.combine l_list e_list) }
+     let* l_e_list =
+       map
+         (fun (l, e) ->
+            let* e = internal_expression e in
+            return (l, e))
+         l_e_list
+     in
+     return { e with e_desc = Erecord_with (e_record, l_e_list) }
   | Etypeconstraint (e', ty) ->
      let* e' = internal_expression e' in
      return { e with e_desc = Etypeconstraint (e', ty) }
