@@ -207,71 +207,71 @@ let rec filter_map f = function
      | None -> return ys
      | Some y -> return (y :: ys)
 
-let rec internal_expression ({ e_desc = e_desc } as e) =
+let rec expression ({ e_desc = e_desc } as e) =
   match e_desc with
   | Elocal _ -> return e
   | Eglobal _ -> return e
   | Econst _ -> return e
   | Econstr0 _ -> return e
   | Econstr1 (c, e_list) ->
-     let* e_list = map internal_expression e_list in
+     let* e_list = map expression e_list in
      return { e with e_desc = Econstr1 (c, e_list) }
   | Elast _ -> return e
   | Eapp (app, op, e_list) ->
-     let* op = internal_expression op in
-     let* e_list = map internal_expression e_list in
+     let* op = expression op in
+     let* e_list = map expression e_list in
      return { e with e_desc = Eapp (app, op, e_list) }
   | Eop (op, e_list) ->
-     let* e_list = map internal_expression e_list in
+     let* e_list = map expression e_list in
      return { e with e_desc = Eop (op, e_list) }
   | Etuple e_list ->
-     let* e_list = map internal_expression e_list in
+     let* e_list = map expression e_list in
      return { e with e_desc = Etuple e_list }
   | Erecord_access (e_record, x) ->
-     let* e_record = internal_expression e_record in
+     let* e_record = expression e_record in
      return { e with e_desc = Erecord_access (e_record, x) }
   | Erecord l_e_list ->
      let* l_e_list =
        map
          (fun (l, e) ->
-            let* e = internal_expression e in
+            let* e = expression e in
             return (l, e))
          l_e_list
      in
      return { e with e_desc = Erecord l_e_list }
   | Erecord_with (e_record, l_e_list) ->
-     let* e_record = internal_expression e_record in
+     let* e_record = expression e_record in
      let* l_e_list =
        map
          (fun (l, e) ->
-            let* e = internal_expression e in
+            let* e = expression e in
             return (l, e))
          l_e_list
      in
      return { e with e_desc = Erecord_with (e_record, l_e_list) }
   | Etypeconstraint (e', ty) ->
-     let* e' = internal_expression e' in
+     let* e' = expression e' in
      return { e with e_desc = Etypeconstraint (e', ty) }
   | Epresent _ -> failwith "Epresent"
   | Ematch _ -> failwith "Ematch"
   | Elet (l, e') ->
-     let* l = internal_local l in
-     let* e' = internal_expression e' in
+     let* l = local l in
+     let* e' = expression e' in
      return { e with e_desc = Elet (l, e') }
   | Eseq (e1, e2) ->
-     let* e1 = internal_expression e1 in
-     let* e2 = internal_expression e2 in
+     let* e1 = expression e1 in
+     let* e2 = expression e2 in
      return { e with e_desc = Eseq (e1, e2) }
   | Eperiod _ -> failwith "Eperiod"
   | Eblock (b, e') ->
-     let* b = internal_block b in
-     let* e' = internal_expression e' in
+     let* b = block b in
+     let* e' = expression e' in
      return { e with e_desc = Eblock (b, e') }
 
-and internal_equation ({ eq_desc = eq_desc } as eq) =
+and equation ({ eq_desc = eq_desc } as eq) =
   match eq_desc with
   | EQeq (p, e) ->
-     let* e = internal_expression e in
+     let* e = expression e in
      return (Some { eq with eq_desc = EQeq (p, e) })
   | EQder _ -> failwith "EQder"
   | EQinit (x,
@@ -293,13 +293,13 @@ and internal_equation ({ eq_desc = eq_desc } as eq) =
   | EQbefore _ -> failwith "EQbefore"
   | EQforall _ -> failwith "EQforall"
 
-and internal_block ({ b_locals = l_list; b_body = eq_list } as b) =
-  let* l_list = map internal_local l_list in
-  let* eq_list = filter_map internal_equation eq_list in
+and block ({ b_locals = l_list; b_body = eq_list } as b) =
+  let* l_list = map local l_list in
+  let* eq_list = filter_map equation eq_list in
   return { b with b_locals = l_list; b_body = eq_list }
 
-and internal_local ({ l_eq = eq_list } as l) =
-  let* eq_list = filter_map internal_equation eq_list in
+and local ({ l_eq = eq_list } as l) =
+  let* eq_list = filter_map equation eq_list in
   return { l with l_eq = eq_list }
 
 let rec pattern_of_list = function
@@ -341,7 +341,7 @@ let rec return_expression ({ e_desc = e_desc } as e) =
   | Eop _ -> failwith "Eop"
   | Etuple [e1; e2] ->
      let id_list = params e1 in
-     let* e2 = internal_expression e2 in
+     let* e2 = expression e2 in
      return
        ((fun hole ->
            { e with e_desc =
@@ -355,7 +355,7 @@ let rec return_expression ({ e_desc = e_desc } as e) =
   | Epresent _ -> failwith "Epresent"
   | Ematch _ -> failwith "Ematch"
   | Elet (l, e') ->
-     let* l = internal_local l in
+     let* l = local l in
      let* f, id_list = return_expression e' in
      return ((fun hole -> { e with e_desc = Elet (l, f hole) }), id_list)
   | Eseq _ -> failwith "Eseq"
