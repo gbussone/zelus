@@ -191,6 +191,22 @@ let bind e f =
   y, union env1 env2
 let ( let* ) = bind
 
+let rec map f = function
+  | [] -> return []
+  | x :: xs ->
+     let* y = f x in
+     let* ys = map f xs in
+     return (y :: ys)
+
+let rec filter_map f = function
+  | [] -> return []
+  | x :: xs ->
+     let* y_opt = f x in
+     let* ys = filter_map f xs in
+     match y_opt with
+     | None -> return ys
+     | Some y -> return (y :: ys)
+
 let rec internal_expression ({ e_desc = e_desc } as e) =
   match e_desc with
   | Elocal _ -> return e
@@ -198,30 +214,30 @@ let rec internal_expression ({ e_desc = e_desc } as e) =
   | Econst _ -> return e
   | Econstr0 _ -> return e
   | Econstr1 (c, e_list) ->
-     let* e_list = internal_expression_list e_list in
+     let* e_list = map internal_expression e_list in
      return { e with e_desc = Econstr1 (c, e_list) }
   | Elast _ -> return e
   | Eapp (app, op, e_list) ->
      let* op = internal_expression op in
-     let* e_list = internal_expression_list e_list in
+     let* e_list = map internal_expression e_list in
      return { e with e_desc = Eapp (app, op, e_list) }
   | Eop (op, e_list) ->
-     let* e_list = internal_expression_list e_list in
+     let* e_list = map internal_expression e_list in
      return { e with e_desc = Eop (op, e_list) }
   | Etuple e_list ->
-     let* e_list = internal_expression_list e_list in
+     let* e_list = map internal_expression e_list in
      return { e with e_desc = Etuple e_list }
   | Erecord_access (e_record, x) ->
      let* e_record = internal_expression e_record in
      return { e with e_desc = Erecord_access (e_record, x) }
   | Erecord l_e_list ->
      let l_list, e_list = List.split l_e_list in
-     let* e_list = internal_expression_list e_list in
+     let* e_list = map internal_expression e_list in
      return { e with e_desc = Erecord (List.combine l_list e_list) }
   | Erecord_with (e_record, l_e_list) ->
      let* e_record = internal_expression e_record in
      let l_list, e_list = List.split l_e_list in
-     let* e_list = internal_expression_list e_list in
+     let* e_list = map internal_expression e_list in
      return
        { e with e_desc = Erecord_with (e_record, List.combine l_list e_list) }
   | Etypeconstraint (e', ty) ->
@@ -242,14 +258,6 @@ let rec internal_expression ({ e_desc = e_desc } as e) =
      let* b = internal_block b in
      let* e' = internal_expression e' in
      return { e with e_desc = Eblock (b, e') }
-
-and internal_expression_list e_list =
-  match e_list with
-  | [] -> return []
-  | e :: e_list ->
-     let* e = internal_expression e in
-     let* e_list = internal_expression_list e_list in
-     return (e :: e_list)
 
 and internal_equation ({ eq_desc = eq_desc } as eq) =
   match eq_desc with
@@ -276,30 +284,14 @@ and internal_equation ({ eq_desc = eq_desc } as eq) =
   | EQbefore _ -> failwith "EQbefore"
   | EQforall _ -> failwith "EQforall"
 
-and internal_equation_list eq_list =
-  match eq_list with
-  | [] -> return []
-  | eq :: eq_list ->
-     let* eq_opt = internal_equation eq in
-     let* eq_list = internal_equation_list eq_list in
-     return (match eq_opt with None -> eq_list | Some eq -> eq :: eq_list)
-
 and internal_block ({ b_locals = l_list; b_body = eq_list } as b) =
-  let* l_list = internal_local_list l_list in
-  let* eq_list = internal_equation_list eq_list in
+  let* l_list = map internal_local l_list in
+  let* eq_list = filter_map internal_equation eq_list in
   return { b with b_locals = l_list; b_body = eq_list }
 
 and internal_local ({ l_eq = eq_list } as l) =
-  let* eq_list = internal_equation_list eq_list in
+  let* eq_list = filter_map internal_equation eq_list in
   return { l with l_eq = eq_list }
-
-and internal_local_list l_list =
-  match l_list with
-  | [] -> return []
-  | l :: l_list ->
-     let* l = internal_local l in
-     let* l_list = internal_local_list l_list in
-     return (l :: l_list)
 
 let rec pattern_of_list = function
   | [] -> Zaux.pmake (Econstpat Evoid) Deftypes.no_typ
