@@ -340,11 +340,12 @@ let rec return_expression ({ e_desc = e_desc } as e) =
   | Eop _ -> failwith "Eop"
   | Etuple [e1; e2] ->
      let id_list = params e1 in
-     let e2, env = internal_expression e2 in
-     ((fun hole ->
-        { e with e_desc =
-                   Etuple [{ e1 with e_desc = Etuple [e1; hole] }; e2] }),
-     id_list), env
+     let* e2 = internal_expression e2 in
+     return
+       ((fun hole ->
+           { e with e_desc =
+                      Etuple [{ e1 with e_desc = Etuple [e1; hole] }; e2] }),
+        id_list)
   | Etuple _ -> failwith "Etuple"
   | Erecord_access _ -> failwith "Erecord_access"
   | Erecord _ -> failwith "Erecord"
@@ -353,9 +354,9 @@ let rec return_expression ({ e_desc = e_desc } as e) =
   | Epresent _ -> failwith "Epresent"
   | Ematch _ -> failwith "Ematch"
   | Elet (l, e') ->
-     let l, env1 = internal_local l in
-     let (f, id_list), env2 = return_expression e' in
-     ((fun hole -> { e with e_desc = Elet (l, f hole) }), id_list), union env1 env2
+     let* l = internal_local l in
+     let* f, id_list = return_expression e' in
+     return ((fun hole -> { e with e_desc = Elet (l, f hole) }), id_list)
   | Eseq _ -> failwith "Eseq"
   | Eperiod _ -> failwith "Eperiod"
   | Eblock _ -> failwith "Eblock"
