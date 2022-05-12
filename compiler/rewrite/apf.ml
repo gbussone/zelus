@@ -351,16 +351,26 @@ let rec return_expression ({ e_desc = e_desc } as e) =
   | Erecord_access _ -> failwith "Erecord_access"
   | Erecord _ -> failwith "Erecord"
   | Erecord_with _ -> failwith "Erecord_with"
-  | Etypeconstraint _ -> failwith "Etypeconstraint"
+  | Etypeconstraint (e', ty) ->
+     let* f, id_list = return_expression e' in
+     return
+       ((fun hole -> { e with e_desc = Etypeconstraint (f hole, ty) }),
+        id_list)
   | Epresent _ -> failwith "Epresent"
   | Ematch _ -> failwith "Ematch"
   | Elet (l, e') ->
      let* l = local l in
      let* f, id_list = return_expression e' in
      return ((fun hole -> { e with e_desc = Elet (l, f hole) }), id_list)
-  | Eseq _ -> failwith "Eseq"
+  | Eseq (e1, e2) ->
+     let* e1 = expression e1 in
+     let* f, id_list = return_expression e2 in
+     return ((fun hole -> { e with e_desc = Eseq (e1, f hole) }), id_list)
   | Eperiod _ -> failwith "Eperiod"
-  | Eblock _ -> failwith "Eblock"
+  | Eblock (b, e') ->
+     let* b = block b in
+     let* f, id_list = return_expression e' in
+     return ((fun hole -> { e with e_desc = Eblock (b, f hole) }), id_list)
 
 let complete_params env id_list =
   let env =
