@@ -189,27 +189,52 @@ let rec internal_expression ({ e_desc = e_desc } as e) =
   | Elocal _ -> e, Zident.Env.empty
   | Eglobal _ -> e, Zident.Env.empty
   | Econst _ -> e, Zident.Env.empty
-  | Econstr0 _ -> failwith "Econstr0"
-  | Econstr1 _ -> failwith "Econstr1"
-  | Elast _ -> failwith "Elast"
+  | Econstr0 _ -> e, Zident.Env.empty
+  | Econstr1 (c, e_list) ->
+     let e_list, env = internal_expression_list e_list in
+     { e with e_desc = Econstr1 (c, e_list) }, env
+  | Elast _ -> e, Zident.Env.empty
   | Eapp (app, op, e_list) ->
      let op, env1 = internal_expression op in
      let e_list, env2 = internal_expression_list e_list in
      { e with e_desc = Eapp (app, op, e_list) }, union env1 env2
-  | Eop _ -> failwith "Eop"
+  | Eop (op, e_list) ->
+     let e_list, env = internal_expression_list e_list in
+     { e with e_desc = Eop (op, e_list) }, env
   | Etuple e_list ->
      let e_list, env = internal_expression_list e_list in
      { e with e_desc = Etuple e_list }, env
-  | Erecord_access _ -> failwith "Erecord_access"
-  | Erecord _ -> failwith "Erecord"
-  | Erecord_with _ -> failwith "Erecord_with"
-  | Etypeconstraint _ -> failwith "Etypeconstraint"
+  | Erecord_access (e_record, x) ->
+     let e_record, env = internal_expression e_record in
+     { e with e_desc = Erecord_access (e_record, x) }, env
+  | Erecord l_e_list ->
+     let l_list, e_list = List.split l_e_list in
+     let e_list, env = internal_expression_list e_list in
+     { e with e_desc = Erecord (List.combine l_list e_list) }, env
+  | Erecord_with (e_record, l_e_list) ->
+     let e_record, env1 = internal_expression e_record in
+     let l_list, e_list = List.split l_e_list in
+     let e_list, env2 = internal_expression_list e_list in
+     { e with e_desc = Erecord_with (e_record, List.combine l_list e_list) },
+     union env1 env2
+  | Etypeconstraint (e', ty) ->
+     let e', env = internal_expression e' in
+     { e with e_desc = Etypeconstraint (e', ty) }, env
   | Epresent _ -> failwith "Epresent"
   | Ematch _ -> failwith "Ematch"
-  | Elet _ -> failwith "Elet"
-  | Eseq _ -> failwith "Eseq"
+  | Elet (l, e') ->
+     let l, env1 = internal_local l in
+     let e', env2 = internal_expression e' in
+     { e with e_desc = Elet (l, e') }, union env1 env2
+  | Eseq (e1, e2) ->
+     let e1, env1 = internal_expression e1 in
+     let e2, env2 = internal_expression e2 in
+     { e with e_desc = Eseq (e1, e2) }, union env1 env2
   | Eperiod _ -> failwith "Eperiod"
-  | Eblock _ -> failwith "Eblock"
+  | Eblock (b, e') ->
+     let b, env1 = internal_block b in
+     let e', env2 = internal_expression e' in
+     { e with e_desc = Eblock (b, e') }, union env1 env2
 
 and internal_expression_list e_list =
   match e_list with
@@ -253,11 +278,22 @@ and internal_equation_list eq_list =
      (match eq_opt with None -> eq_list | Some eq -> eq :: eq_list),
      union env1 env2
 
-(* and block ({ b_locals = l_list; b_body = eq_list } as b) = assert false *)
+and internal_block ({ b_locals = l_list; b_body = eq_list } as b) =
+  let l_list, env1 = internal_local_list l_list in
+  let eq_list, env2 = internal_equation_list eq_list in
+  { b with b_locals = l_list; b_body = eq_list }, union env1 env2
 
 and internal_local ({ l_eq = eq_list } as l) =
   let eq_list, env = internal_equation_list eq_list in
   { l with l_eq = eq_list }, env
+
+and internal_local_list l_list =
+  match l_list with
+  | [] -> [], Zident.Env.empty
+  | l :: l_list ->
+     let l, env1 = internal_local l in
+     let l_list, env2 = internal_local_list l_list in
+     l :: l_list, union env1 env2
 
 let rec pattern_of_list = function
   | [] -> Zaux.pmake (Econstpat Evoid) Deftypes.no_typ
