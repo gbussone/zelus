@@ -341,10 +341,10 @@ let rec return_expression ({ e_desc = e_desc } as e) =
   | Etuple [e1; e2] ->
      let id_list = params e1 in
      let e2, env = internal_expression e2 in
-     (fun hole ->
+     ((fun hole ->
         { e with e_desc =
                    Etuple [{ e1 with e_desc = Etuple [e1; hole] }; e2] }),
-     env, id_list
+     id_list), env
   | Etuple _ -> failwith "Etuple"
   | Erecord_access _ -> failwith "Erecord_access"
   | Erecord _ -> failwith "Erecord"
@@ -354,9 +354,8 @@ let rec return_expression ({ e_desc = e_desc } as e) =
   | Ematch _ -> failwith "Ematch"
   | Elet (l, e') ->
      let l, env1 = internal_local l in
-     let f, env2, id_list = return_expression e' in
-     (fun hole -> { e with e_desc = Elet (l, f hole) }), union env1 env2,
-     id_list
+     let (f, id_list), env2 = return_expression e' in
+     ((fun hole -> { e with e_desc = Elet (l, f hole) }), id_list), union env1 env2
   | Eseq _ -> failwith "Eseq"
   | Eperiod _ -> failwith "Eperiod"
   | Eblock _ -> failwith "Eblock"
@@ -391,7 +390,7 @@ let implementation acc impl =
   | Efundecl (_, { f_kind = (S | AS | A | AD | D | C) }) -> impl :: acc
   | Efundecl (n, ({ f_kind = P; f_args = pat_list;
                     f_body = e; f_env = f_env } as body)) ->
-     let f, env, id_list1 = return_expression e in
+     let (f, id_list1), env = return_expression e in
      let pat1 = pattern_of_list id_list1 in
      let dist1 = dist_of_list env id_list1 in
      let id_list2 = complete_params env id_list1 in
