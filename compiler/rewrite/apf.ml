@@ -184,71 +184,78 @@ let union env1 env2 =
     (fun _ _ _ -> failwith "init sample is used twice with the same name")
     env1 env2
 
+let return x = x, Zident.Env.empty
+let bind e f =
+  let x, env1 = e in
+  let y, env2 = f x in
+  y, union env1 env2
+let ( let* ) = bind
+
 let rec internal_expression ({ e_desc = e_desc } as e) =
   match e_desc with
-  | Elocal _ -> e, Zident.Env.empty
-  | Eglobal _ -> e, Zident.Env.empty
-  | Econst _ -> e, Zident.Env.empty
-  | Econstr0 _ -> e, Zident.Env.empty
+  | Elocal _ -> return e
+  | Eglobal _ -> return e
+  | Econst _ -> return e
+  | Econstr0 _ -> return e
   | Econstr1 (c, e_list) ->
-     let e_list, env = internal_expression_list e_list in
-     { e with e_desc = Econstr1 (c, e_list) }, env
-  | Elast _ -> e, Zident.Env.empty
+     let* e_list = internal_expression_list e_list in
+     return { e with e_desc = Econstr1 (c, e_list) }
+  | Elast _ -> return e
   | Eapp (app, op, e_list) ->
-     let op, env1 = internal_expression op in
-     let e_list, env2 = internal_expression_list e_list in
-     { e with e_desc = Eapp (app, op, e_list) }, union env1 env2
+     let* op = internal_expression op in
+     let* e_list = internal_expression_list e_list in
+     return { e with e_desc = Eapp (app, op, e_list) }
   | Eop (op, e_list) ->
-     let e_list, env = internal_expression_list e_list in
-     { e with e_desc = Eop (op, e_list) }, env
+     let* e_list = internal_expression_list e_list in
+     return { e with e_desc = Eop (op, e_list) }
   | Etuple e_list ->
-     let e_list, env = internal_expression_list e_list in
-     { e with e_desc = Etuple e_list }, env
+     let* e_list = internal_expression_list e_list in
+     return { e with e_desc = Etuple e_list }
   | Erecord_access (e_record, x) ->
-     let e_record, env = internal_expression e_record in
-     { e with e_desc = Erecord_access (e_record, x) }, env
+     let* e_record = internal_expression e_record in
+     return { e with e_desc = Erecord_access (e_record, x) }
   | Erecord l_e_list ->
      let l_list, e_list = List.split l_e_list in
-     let e_list, env = internal_expression_list e_list in
-     { e with e_desc = Erecord (List.combine l_list e_list) }, env
+     let* e_list = internal_expression_list e_list in
+     return { e with e_desc = Erecord (List.combine l_list e_list) }
   | Erecord_with (e_record, l_e_list) ->
-     let e_record, env1 = internal_expression e_record in
+     let* e_record = internal_expression e_record in
      let l_list, e_list = List.split l_e_list in
-     let e_list, env2 = internal_expression_list e_list in
-     { e with e_desc = Erecord_with (e_record, List.combine l_list e_list) },
-     union env1 env2
+     let* e_list = internal_expression_list e_list in
+     return
+       { e with e_desc = Erecord_with (e_record, List.combine l_list e_list) }
   | Etypeconstraint (e', ty) ->
-     let e', env = internal_expression e' in
-     { e with e_desc = Etypeconstraint (e', ty) }, env
+     let* e' = internal_expression e' in
+     return { e with e_desc = Etypeconstraint (e', ty) }
   | Epresent _ -> failwith "Epresent"
   | Ematch _ -> failwith "Ematch"
   | Elet (l, e') ->
-     let l, env1 = internal_local l in
-     let e', env2 = internal_expression e' in
-     { e with e_desc = Elet (l, e') }, union env1 env2
+     let* l = internal_local l in
+     let* e' = internal_expression e' in
+     return { e with e_desc = Elet (l, e') }
   | Eseq (e1, e2) ->
-     let e1, env1 = internal_expression e1 in
-     let e2, env2 = internal_expression e2 in
-     { e with e_desc = Eseq (e1, e2) }, union env1 env2
+     let* e1 = internal_expression e1 in
+     let* e2 = internal_expression e2 in
+     return { e with e_desc = Eseq (e1, e2) }
   | Eperiod _ -> failwith "Eperiod"
   | Eblock (b, e') ->
-     let b, env1 = internal_block b in
-     let e', env2 = internal_expression e' in
-     { e with e_desc = Eblock (b, e') }, union env1 env2
+     let* b = internal_block b in
+     let* e' = internal_expression e' in
+     return { e with e_desc = Eblock (b, e') }
 
 and internal_expression_list e_list =
   match e_list with
-  | [] -> [], Zident.Env.empty
+  | [] -> return []
   | e :: e_list ->
-     let e, env1 = internal_expression e in
-     let e_list, env2 = internal_expression_list e_list in
-     e :: e_list, union env1 env2
+     let* e = internal_expression e in
+     let* e_list = internal_expression_list e_list in
+     return (e :: e_list)
 
 and internal_equation ({ eq_desc = eq_desc } as eq) =
   match eq_desc with
   | EQeq (p, e) ->
-     let e, env = internal_expression e in
-     Some { eq with eq_desc = EQeq (p, e) }, env
+     let* e = internal_expression e in
+     return (Some { eq with eq_desc = EQeq (p, e) })
   | EQder _ -> failwith "EQder"
   | EQinit (x,
             { e_desc =
@@ -271,29 +278,28 @@ and internal_equation ({ eq_desc = eq_desc } as eq) =
 
 and internal_equation_list eq_list =
   match eq_list with
-  | [] -> [], Zident.Env.empty
+  | [] -> return []
   | eq :: eq_list ->
-     let eq_opt, env1 = internal_equation eq in
-     let eq_list, env2 = internal_equation_list eq_list in
-     (match eq_opt with None -> eq_list | Some eq -> eq :: eq_list),
-     union env1 env2
+     let* eq_opt = internal_equation eq in
+     let* eq_list = internal_equation_list eq_list in
+     return (match eq_opt with None -> eq_list | Some eq -> eq :: eq_list)
 
 and internal_block ({ b_locals = l_list; b_body = eq_list } as b) =
-  let l_list, env1 = internal_local_list l_list in
-  let eq_list, env2 = internal_equation_list eq_list in
-  { b with b_locals = l_list; b_body = eq_list }, union env1 env2
+  let* l_list = internal_local_list l_list in
+  let* eq_list = internal_equation_list eq_list in
+  return { b with b_locals = l_list; b_body = eq_list }
 
 and internal_local ({ l_eq = eq_list } as l) =
-  let eq_list, env = internal_equation_list eq_list in
-  { l with l_eq = eq_list }, env
+  let* eq_list = internal_equation_list eq_list in
+  return { l with l_eq = eq_list }
 
 and internal_local_list l_list =
   match l_list with
-  | [] -> [], Zident.Env.empty
+  | [] -> return []
   | l :: l_list ->
-     let l, env1 = internal_local l in
-     let l_list, env2 = internal_local_list l_list in
-     l :: l_list, union env1 env2
+     let* l = internal_local l in
+     let* l_list = internal_local_list l_list in
+     return (l :: l_list)
 
 let rec pattern_of_list = function
   | [] -> Zaux.pmake (Econstpat Evoid) Deftypes.no_typ
