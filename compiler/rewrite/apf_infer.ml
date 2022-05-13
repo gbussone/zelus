@@ -12,33 +12,16 @@
 (*                                                                     *)
 (* *********************************************************************)
 
-(*
-(* translation of a probabilistic node into a node. *)
-(* the translation is applied to normalised programs *)
+(* translation of inference calls. *)
 
-(* every probabilistic node:
+(* every call to an inference function:
 
-   [let proba f x1 ... xn = ...]
+   [Infer.infer apf_params (model, obs)]
 
 is translated into:
 
-   [let node f x1 ... prob xn = ...]
-
-and every application of a probabilistic node:
-
-   [f e1 ... en]
-
-into:
-
-   [f e1 ... prob en]
+   [Infer.infer apf_params (Infer.mk_model model, obs)]
  *)
-
-open Zelus
-open Deftypes
-open Lident
-open Zident
-
-  *)
 
 open Zelus
 
