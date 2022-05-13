@@ -136,8 +136,13 @@ let compile modname filename =
     step "Scoping done. See below:" Scoping.implementation_list impl_list in
   let impl_list =
     if !apf
-    then step "Translation of probabilistic nodes for APF done. See below:"
-              Apf.implementation_list impl_list
+    then step "Translation of inference calls done. See below:"
+              Apf_infer.implementation_list impl_list
+    else impl_list in
+  let impl_list =
+    if !apf
+    then step "Translation of samples done. See below:"
+              Apf_sample.implementation_list impl_list
     else impl_list in
   let impl_list =
     step "Typing done." (Typing.implementation_list info_ff true) impl_list in
