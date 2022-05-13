@@ -283,6 +283,13 @@ and equation ({ eq_desc = eq_desc } as eq) =
                       { e_desc = Eglobal { lname = Name "sample" } },
                       [e]) }) ->
      None, Zident.Env.singleton x e
+  | EQinit (x,
+            { e_desc =
+                Eapp (_,
+                      { e_desc =
+                          Eglobal { lname = Modname { id = "sample" } } },
+                      [e]) }) ->
+     None, Zident.Env.singleton x e
   | EQinit (x, e) ->
      let* e = expression e in
      return (Some { eq with eq_desc = EQinit (x, e) })
