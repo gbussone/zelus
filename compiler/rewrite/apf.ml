@@ -207,6 +207,9 @@ let rec filter_map f = function
      | None -> return ys
      | Some y -> return (y :: ys)
 
+let pmake desc = Zaux.pmake desc Deftypes.no_typ
+let emake desc = Zaux.emake desc Deftypes.no_typ
+
 let rec expression ({ e_desc = e_desc } as e) =
   match e_desc with
   | Elocal _ -> return e
@@ -303,17 +306,14 @@ and local ({ l_eq = eq_list } as l) =
   return { l with l_eq = eq_list }
 
 let rec pattern_of_list = function
-  | [] -> Zaux.pmake (Econstpat Evoid) Deftypes.no_typ
-  | [x] -> Zaux.pmake (Evarpat x) Deftypes.no_typ
-  | x :: id_list ->
-     Zaux.pairpat (Zaux.pmake (Evarpat x) Deftypes.no_typ)
-       (pattern_of_list id_list)
+  | [] -> pmake (Econstpat Evoid)
+  | [x] -> pmake (Evarpat x)
+  | x :: id_list -> Zaux.pairpat (pmake (Evarpat x)) (pattern_of_list id_list)
 
 let rec exp_of_list = function
-  | [] -> Zaux.emake (Econst Evoid) Deftypes.no_typ
-  | [x] -> Zaux.emake (Elocal x) Deftypes.no_typ
-  | x :: id_list ->
-     Zaux.pair (Zaux.emake (Elocal x) Deftypes.no_typ) (exp_of_list id_list)
+  | [] -> emake (Econst Evoid)
+  | [x] -> emake (Elocal x)
+  | x :: id_list -> Zaux.pair (emake (Elocal x)) (exp_of_list id_list)
 
 let params ({ e_desc = e_desc } as e) =
   let rec aux { e_desc = e_desc } =
@@ -381,13 +381,11 @@ let complete_params env id_list =
   Zident.Env.fold (fun x _ id_list -> x :: id_list) env []
 
 let distribution_call fun_name e =
-  Zaux.emake
+  emake
     (Eapp (Zaux.prime_app,
-           Zaux.emake
-             (Zaux.global (Modname { qual = "Distribution"; id = fun_name }))
-             Deftypes.no_typ,
+           emake
+             (Zaux.global (Modname { qual = "Distribution"; id = fun_name })),
            [e]))
-    Deftypes.no_typ
 
 let rec dist_of_list env = function
   | [] -> distribution_call "dirac" Zaux.evoid
@@ -414,8 +412,7 @@ let implementation acc impl =
                    Econstdecl (n,
                                false,
                                Zaux.pair
-                                 (Zaux.emake (Zaux.global (Name ("__" ^ n)))
-                                    Deftypes.no_typ)
+                                 (emake (Zaux.global (Name ("__" ^ n))))
                                  (distribution_call "of_pair"
                                     (Zaux.pair dist1 dist2))) }
      :: { impl with desc =
