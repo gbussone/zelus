@@ -347,4 +347,4 @@ let implementation impl =
   | Efundecl (n, ({ f_body = e } as body)) ->
      { impl with desc = Efundecl (n, { body with f_body = expression e }) }
 
-let implementation_list impl_list = List.map implementation impl_list
+let implementation_list impl_list = Zmisc.iter implementation impl_list
