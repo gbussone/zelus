@@ -411,18 +411,22 @@ let implementation acc impl =
      let e = exp_of_list id_list2 in
      let head, tail = Zmisc.firsts pat_list in
      { impl with desc =
-                   Efundecl(n,
-                            { body with f_kind = P;
-                                        f_args =
-                                          head
-                                          @ [Zaux.pairpat
-                                               (Zaux.pairpat pat1 pat2) tail];
-                                        f_body = f e; f_env = f_env }) }
+                   Econstdecl (n,
+                               false,
+                               Zaux.pair
+                                 (Zaux.emake (Zaux.global (Name ("__" ^ n)))
+                                    Deftypes.no_typ)
+                                 (distribution_call "of_pair"
+                                    (Zaux.pair dist1 dist2))) }
      :: { impl with desc =
-                      Econstdecl (n ^ "_distributions",
-                                  false,
-                                  distribution_call "of_pair"
-                                    (Zaux.pair dist1 dist2)) }
+                      Efundecl("__" ^ n,
+                               { body with f_kind = P;
+                                           f_args =
+                                             head
+                                             @ [Zaux.pairpat
+                                                  (Zaux.pairpat pat1 pat2)
+                                                  tail];
+                                           f_body = f e; f_env = f_env }) }
      :: acc
 
 let implementation_list impl_list = Zmisc.fold implementation impl_list
