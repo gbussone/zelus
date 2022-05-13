@@ -283,7 +283,9 @@ and equation ({ eq_desc = eq_desc } as eq) =
                       { e_desc = Eglobal { lname = Name "sample" } },
                       [e]) }) ->
      None, Zident.Env.singleton x e
-  | EQinit _ -> failwith "EQinit"
+  | EQinit (x, e) ->
+     let* e = expression e in
+     return (Some { eq with eq_desc = EQinit (x, e) })
   | EQnext _ -> failwith "EQnext"
   | EQpluseq _ -> failwith "EQpluseq"
   | EQautomaton _ -> failwith "EQautomaton"
