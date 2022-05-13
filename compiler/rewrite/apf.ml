@@ -19,7 +19,7 @@ open Zelus
 (* the translation is applied to normalised programs *)
 
 (* every probabilistic node:
-   
+
    [let proba f x1 ... xn = ...]
 
 is translated into:
@@ -39,7 +39,7 @@ open Zelus
 open Deftypes
 open Lident
 open Zident
-       
+
 let new_prob () = Zident.fresh "prob"
 
 (* If the extra parameter [prob] is given a type, say [prob] *)
@@ -49,9 +49,9 @@ let new_prob () = Zident.fresh "prob"
 let typ_prob = Ztypes.make (Deftypes.Tvar)
 let prob_varpat x = Zaux.varpat x typ_prob
 let prob_var x = Zaux.var x typ_prob
-							  
+
 (* Add the extra input parameter "time" for hybrid nodes *)
-let extra_input prob env = 
+let extra_input prob env =
   Env.add prob { t_sort = Deftypes.value; t_typ = typ_prob } env,
   (prob_varpat prob)
 
@@ -60,9 +60,9 @@ let rec expression prob ({ e_desc = e_desc } as e) =
   match e_desc with
   | Eperiod({ p_phase = opt_p1; p_period = p2 }) ->
      { e with e_desc =
-		Eperiod({ p_phase =
-			    Zmisc.optional_map (expression prob) opt_p1;
-			  p_period = expression prob p2 }) }
+                Eperiod({ p_phase =
+                            Zmisc.optional_map (expression prob) opt_p1;
+                          p_period = expression prob p2 }) }
   | Eop(op, e_list) ->
      { e with e_desc = Eop(op, List.map (expression prob) e_list) }
   | Eapp(app, op, e_list) ->
@@ -96,21 +96,21 @@ let rec expression prob ({ e_desc = e_desc } as e) =
      { e with e_desc = Eblock(block prob b, expression prob e) }
   | Eseq(e1, e2) ->
      { e with e_desc =
-		Eseq(expression prob e1, expression prob e2) }
+                Eseq(expression prob e1, expression prob e2) }
   | Elocal _ | Eglobal _ | Econst _ | Econstr0 _ | Elast _ -> e
   | Epresent _ | Ematch _ -> assert false
 
 (* Translation of equations *)
 and equation prob ({ eq_desc = desc } as eq) =
-  match desc with 
+  match desc with
   | EQeq(p, e) -> { eq with eq_desc = EQeq(p, expression prob e) }
   | EQpluseq(x, e) -> { eq with eq_desc = EQpluseq(x, expression prob e) }
   | EQmatch(total, e, m_h_list) ->
      let m_h_list =
        List.map
          (fun ({ m_body = b } as m_h) ->
-	  { m_h with m_body = block prob b })
-	 m_h_list in
+          { m_h with m_body = block prob b })
+         m_h_list in
      { eq with eq_desc = EQmatch(total, expression prob e, m_h_list) }
   | EQreset(res_eq_list, e) ->
      let e = expression prob e in
@@ -122,36 +122,36 @@ and equation prob ({ eq_desc = desc } as eq) =
      { eq with eq_desc = EQbefore(equation_list prob before_eq_list) }
   | EQinit(x, e) ->
      { eq with eq_desc = EQinit(x, expression prob e) }
-  | EQder(x, e, None, []) -> 
+  | EQder(x, e, None, []) ->
      { eq with eq_desc = EQder(x, expression prob e, None, []) }
   | EQnext(x, e, e_opt) ->
      let e_opt = Zmisc.optional_map (expression prob) e_opt in
      { eq with eq_desc = EQnext(x, expression prob e, e_opt) }
   | EQblock(b) -> { eq with eq_desc = EQblock(block prob b) }
   | EQforall ({ for_index = i_list; for_init = init_list;
-		for_body = b_eq_list } as body) ->
+                for_body = b_eq_list } as body) ->
      let index ({ desc = desc } as ind) =
        let desc = match desc with
        | Einput(x, e) -> Einput(x, expression prob e)
        | Eoutput _ -> desc
        | Eindex(x, e1, e2) ->
-	  Eindex(x, expression prob e1, expression prob e2) in
+          Eindex(x, expression prob e1, expression prob e2) in
        { ind with desc = desc } in
      let init ({ desc = desc } as ini) =
        let desc = match desc with
-	 | Einit_last(x, e) -> Einit_last(x, expression prob e) in
+         | Einit_last(x, e) -> Einit_last(x, expression prob e) in
        { ini with desc = desc } in
      let i_list = List.map index i_list in
      let init_list = List.map init init_list in
      let b_eq_list = block prob b_eq_list in
      { eq with eq_desc = EQforall { body with for_index = i_list;
-					      for_init = init_list;
-					      for_body = b_eq_list } }
+                                              for_init = init_list;
+                                              for_body = b_eq_list } }
   | EQautomaton _ | EQpresent _ | EQemit _
   | EQder _ -> assert false
-		      
+
 and equation_list prob eq_list = List.map (equation prob) eq_list
-					  
+
 (** Translate a block *)
 and block prob ({ b_locals = l_list; b_body = eq_list } as b) =
   let l_list = List.map (local prob) l_list in
@@ -163,20 +163,20 @@ and local prob ({ l_eq = eq_list } as l) =
 
 let implementation impl =
   match impl.desc with
-  | Eopen _ | Etypedecl _ | Econstdecl _  
+  | Eopen _ | Etypedecl _ | Econstdecl _
   | Efundecl(_, { f_kind = (S | AS | A | AD | D | C) }) -> impl
   | Efundecl(n, ({ f_kind = P; f_args = pat_list;
-		   f_body = e; f_env = f_env } as body)) ->
+                   f_body = e; f_env = f_env } as body)) ->
      let prob = new_prob () in
      let e = expression prob e in
      let head, tail = Zmisc.firsts pat_list in
      let f_env, prob = extra_input prob f_env in
-     { impl with desc = 
-		   Efundecl(n,
-			    { body with f_kind = D;
-					f_args =
-					  head @ [Zaux.pairpat prob tail]; 
-					f_body = e; f_env = f_env }) }
+     { impl with desc =
+                   Efundecl(n,
+                            { body with f_kind = D;
+                                        f_args =
+                                          head @ [Zaux.pairpat prob tail];
+                                        f_body = e; f_env = f_env }) }
   *)
 
 let union env1 env2 =
@@ -405,7 +405,7 @@ let rec dist_of_list env = function
 
 let implementation acc impl =
   match impl.desc with
-  | Eopen _ | Etypedecl _ | Econstdecl _  
+  | Eopen _ | Etypedecl _ | Econstdecl _
   | Efundecl (_, { f_kind = (S | AS | A | AD | D | C) }) -> impl :: acc
   | Efundecl (n, ({ f_kind = P; f_args = pat_list;
                     f_body = e; f_env = f_env } as body)) ->
