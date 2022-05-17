@@ -319,11 +319,6 @@ let rec pattern_of_list = function
   | [x] -> pmake (Evarpat x)
   | x :: id_list -> Zaux.pairpat (pmake (Evarpat x)) (pattern_of_list id_list)
 
-let rec exp_of_list = function
-  | [] -> emake (Econst Evoid)
-  | [x] -> emake (Elocal x)
-  | x :: id_list -> Zaux.pair (emake (Elocal x)) (exp_of_list id_list)
-
 let params ({ e_desc = e_desc } as e) =
   let rec aux { e_desc = e_desc } =
     match e_desc with
@@ -351,35 +346,29 @@ let rec return_expression ({ e_desc = e_desc } as e) =
   | Etuple [e1; e2] ->
      let id_list = params e1 in
      let* e2 = expression e2 in
-     return
-       ((fun hole ->
-           { e with e_desc =
-                      Etuple [{ e1 with e_desc = Etuple [e1; hole] }; e2] }),
-        id_list)
+     return (e2, id_list)
   | Etuple _ -> failwith "Etuple"
   | Erecord_access _ -> failwith "Erecord_access"
   | Erecord _ -> failwith "Erecord"
   | Erecord_with _ -> failwith "Erecord_with"
   | Etypeconstraint (e', ty) ->
-     let* f, id_list = return_expression e' in
-     return
-       ((fun hole -> { e with e_desc = Etypeconstraint (f hole, ty) }),
-        id_list)
+     let* e', id_list = return_expression e' in
+     return ({ e with e_desc = Etypeconstraint (e', ty) }, id_list)
   | Epresent _ -> failwith "Epresent"
   | Ematch _ -> failwith "Ematch"
   | Elet (l, e') ->
      let* l = local l in
-     let* f, id_list = return_expression e' in
-     return ((fun hole -> { e with e_desc = Elet (l, f hole) }), id_list)
+     let* e', id_list = return_expression e' in
+     return ({ e with e_desc = Elet (l, e') }, id_list)
   | Eseq (e1, e2) ->
      let* e1 = expression e1 in
-     let* f, id_list = return_expression e2 in
-     return ((fun hole -> { e with e_desc = Eseq (e1, f hole) }), id_list)
+     let* e2, id_list = return_expression e2 in
+     return ({ e with e_desc = Eseq (e1, e2) }, id_list)
   | Eperiod _ -> failwith "Eperiod"
   | Eblock (b, e') ->
      let* b = block b in
-     let* f, id_list = return_expression e' in
-     return ((fun hole -> { e with e_desc = Eblock (b, f hole) }), id_list)
+     let* e', id_list = return_expression e' in
+     return ({ e with e_desc = Eblock (b, e') }, id_list)
 
 let complete_params env id_list =
   let env =
@@ -409,13 +398,12 @@ let implementation acc impl =
   | Efundecl (_, { f_kind = (S | AS | A | AD | D | C) }) -> impl :: acc
   | Efundecl (n, ({ f_kind = P; f_args = pat_list;
                     f_body = e; f_env = f_env } as body)) ->
-     let (f, id_list1), env = return_expression e in
+     let (e, id_list1), env = return_expression e in
      let pat1 = pattern_of_list id_list1 in
      let dist1 = dist_of_list env id_list1 in
      let id_list2 = complete_params env id_list1 in
      let pat2 = pattern_of_list id_list2 in
      let dist2 = dist_of_list env id_list2 in
-     let e = exp_of_list id_list2 in
      let head, tail = Zmisc.firsts pat_list in
      { impl with desc =
                    Econstdecl (n,
@@ -432,7 +420,7 @@ let implementation acc impl =
                                              @ [Zaux.pairpat
                                                   (Zaux.pairpat pat1 pat2)
                                                   tail];
-                                           f_body = f e; f_env = f_env }) }
+                                           f_body = e; f_env = f_env }) }
      :: acc
 
 let implementation_list impl_list = Zmisc.fold implementation impl_list
