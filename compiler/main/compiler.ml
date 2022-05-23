@@ -191,9 +191,6 @@ let compile modname filename =
             step "Translation of inference calls done. See below:"
                  Apf_infer.implementation_list impl_list in
           let impl_list =
-            step "Change in the type of inference functions done. See below:"
-                 Apf_infer2.implementation_list impl_list in
-          let impl_list =
             step "Translation of samples done. See below:"
                  Apf_sample.implementation_list impl_list in
           let impl_list = Unscoping.implementation_list impl_list in
