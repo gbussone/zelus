@@ -46,23 +46,24 @@ let rec expression ({ e_desc = e_desc } as e) =
           [e1;
            ({ e_desc = Eglobal ({ lname = lname } as id) } as e2);
            e3]) ->
-    { e with
-      e_desc =
-        Eapp (app,
-              op,
-              [e1;
-               { e2 with
-                 e_desc =
-                   Eglobal
-                     { id with
-                       lname = rename (Printf.sprintf "__%s_model") lname } };
-               Zaux.pair
-                 { e2 with
-                   e_desc =
-                     Eglobal
-                       { id with
-                         lname = rename (Printf.sprintf "__%s_prior") lname } }
-                 e3]) }
+     { e with
+       e_desc =
+         Eapp (app,
+               op,
+               [e1;
+                { e2 with
+                  e_desc =
+                    Eglobal
+                      { id with
+                        lname = rename (Printf.sprintf "__%s_model") lname } };
+                Zaux.pair
+                  { e2 with
+                    e_desc =
+                      Eglobal
+                        { id with
+                          lname =
+                            rename (Printf.sprintf "__%s_prior") lname } }
+                  e3]) }
   | Eapp (app, op, e_list) ->
      { e with e_desc = Eapp (app, expression op, List.map expression e_list) }
   | Eop (op, e_list) ->
