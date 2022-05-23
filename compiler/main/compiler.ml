@@ -135,16 +135,6 @@ let compile modname filename =
   let impl_list =
     step "Scoping done. See below:" Scoping.implementation_list impl_list in
   let impl_list =
-    if !apf
-    then step "Translation of inference calls done. See below:"
-              Apf_infer.implementation_list impl_list
-    else impl_list in
-  let impl_list =
-    if !apf
-    then step "Translation of samples done. See below:"
-              Apf_sample.implementation_list impl_list
-    else impl_list in
-  let impl_list =
     step "Typing done." (Typing.implementation_list info_ff true) impl_list in
   let impl_list =
     if not !no_causality
@@ -194,6 +184,22 @@ let compile modname filename =
       let impl_list =
 	step "Translation of disc done. See below:"
 	     Disc.implementation_list impl_list in
+      let impl_list =
+        if !apf
+        then
+          let impl_list =
+            step "Translation of inference calls done. See below:"
+                 Apf_infer.implementation_list impl_list in
+          let impl_list =
+            step "Translation of samples done. See below:"
+                 Apf_sample.implementation_list impl_list in
+          let impl_list = Unscoping.implementation_list impl_list in
+          let impl_list =
+            step "Scoping done. See below:"
+                 Scoping.implementation_list impl_list in
+          step "Typing done. See below:"
+               (Typing.implementation_list info_ff false) impl_list
+        else impl_list in
       let impl_list =
 	step "Translation of probabilistic nodes. See below:"
 	     Proba.implementation_list impl_list in
