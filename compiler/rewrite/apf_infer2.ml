@@ -13,12 +13,9 @@
 (* *********************************************************************)
 
 let implementation_list impl_list =
-  let modules = Modules.modules in
-  let modules = modules.modules in
   Modules.E.iter
-    (fun modname env ->
-       let values = env.Modules.values in
-       match Modules.E.find_opt "infer" values with
+    (fun _ env ->
+       match Modules.E.find_opt "infer" env.Modules.values with
        | None -> ()
        | Some value_desc ->
          let value_typ = value_desc.value_typ in
@@ -34,5 +31,5 @@ let implementation_list impl_list =
            t2.t_desc <- Tfun (Tdiscrete true, None, Deftypes.make (Deftypes.Tproduct [Deftypes.make (Deftypes.Tconstr ({ qual = "Distribution"; id = "t" }, [Deftypes.make (Deftypes.Tproduct [beta; delta])], Deftypes.no_abbrev ())); alpha]), t14);
            value_desc.value_typ <- { value_typ with typ_vars = delta :: typ_vars }
          | _ -> assert false)
-    modules;
+    Modules.modules.modules;
   impl_list
