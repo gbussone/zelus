@@ -42,31 +42,10 @@ let rec expression ({ e_desc = e_desc } as e) =
      { e with e_desc = Econstr1 (c, List.map expression e_list) }
   | Elast _ -> e
   | Eapp (app,
-          ({ e_desc =
-               Eglobal
-                 { lname = Modname { qual = modname; id = "infer" } } } as op),
+          ({ e_desc = Eglobal { lname = Modname { id = "infer" } } } as op),
           [e1;
            ({ e_desc = Eglobal ({ lname = lname } as id) } as e2);
            e3]) ->
-    let modules = Modules.modules in
-    let modules = modules.modules in
-    let env = Modules.E.find modname modules in
-    let values = env.values in
-    let value_desc = Modules.E.find "infer" values in
-    let value_typ = value_desc.value_typ in
-    let typ_vars = value_typ.typ_vars in
-    let typ_body = value_typ.typ_body in
-    let t_desc = typ_body.t_desc in
-    begin match t_desc with
-      | Tfun (_, _, _, { t_desc = Tfun (_, _, ({ t_desc = Tfun (Tproba, None, alpha, { t_desc = Tproduct [beta; gamma] }) } as t1), ({ t_desc = Tfun (Tdiscrete true, None, alpha', t14) } as t2)) }) when alpha = alpha' ->
-        Zmisc.push_binding_level ();
-        let delta = Ztypes.new_var () in
-        Zmisc.pop_binding_level ();
-        t1.t_desc <- Tfun (Tproba, None, Deftypes.make (Deftypes.Tproduct [Deftypes.make (Deftypes.Tproduct [beta; delta]); alpha]), gamma);
-        t2.t_desc <- Tfun (Tdiscrete true, None, Deftypes.make (Deftypes.Tproduct [Deftypes.make (Deftypes.Tconstr ({ qual = "Distribution"; id = "t" }, [Deftypes.make (Deftypes.Tproduct [beta; delta])], Deftypes.no_abbrev ())); alpha]), t14);
-        value_desc.value_typ <- { value_typ with typ_vars = delta :: typ_vars }
-      | _ -> assert false
-    end;
     { e with
       e_desc =
         Eapp (app,
