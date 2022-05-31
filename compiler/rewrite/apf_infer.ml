@@ -42,22 +42,14 @@ let rec expression ({ e_desc = e_desc } as e) =
      { e with e_desc = Econstr1 (c, List.map expression e_list) }
   | Elast _ -> e
   | Eapp (app,
-          ({ e_desc =
-               Eglobal
-                 ({ lname =
-                      (Modname { id = "infer" } as lname_op) } as id_op) }
-           as op),
+          ({ e_desc = Eglobal { lname = Modname { id = "infer" } } } as op),
           [e1;
            ({ e_desc = Eglobal ({ lname = lname } as id) } as e2);
            e3]) ->
      { e with
        e_desc =
          Eapp (app,
-               { op with
-                 e_desc =
-                   Eglobal
-                     { id_op with
-                       lname = rename (fun s -> s ^ "__") lname_op } },
+               op,
                [e1;
                 { e2 with
                   e_desc =
