@@ -179,10 +179,22 @@ let implementation impl =
                                         f_body = e; f_env = f_env }) }
   *)
 
+let typ_prob env x =
+  match Zident.Env.find x env with
+  | { e_typ = { t_desc = Deftypes.Tconstr (_, [t], _) } } -> t
+  | _ -> assert false
+let prob_varpat env x = Zaux.varpat x (typ_prob env x)
+let prob_var env x = Zaux.var x (typ_prob env x)
+let extra_input env x f_env =
+  Zident.Env.add x { Deftypes.t_sort = Deftypes.value; Deftypes.t_typ = typ_prob env x } f_env
+
 let union env1 env2 =
   Zident.Env.union
     (fun _ _ _ -> failwith "init sample is used twice with the same name")
     env1 env2
+
+let diff env1 env2 =
+  Zident.Env.filter (fun k _ -> not (Zident.Env.mem k env2)) env1
 
 let return x = x, Zident.Env.empty
 let bind e f =
@@ -206,9 +218,6 @@ let rec filter_map f = function
      match y_opt with
      | None -> return ys
      | Some y -> return (y :: ys)
-
-let pmake desc = Zaux.pmake desc Deftypes.no_typ
-let emake desc = Zaux.emake desc Deftypes.no_typ
 
 let rec expression ({ e_desc = e_desc } as e) =
   match e_desc with
@@ -310,14 +319,15 @@ and block ({ b_locals = l_list; b_body = eq_list } as b) =
   let* eq_list = filter_map equation eq_list in
   return { b with b_locals = l_list; b_body = eq_list }
 
-and local ({ l_eq = eq_list } as l) =
-  let* eq_list = filter_map equation eq_list in
-  return { l with l_eq = eq_list }
+and local ({ l_eq = eq_list; l_env = l_env } as l) =
+  let eq_list, env = filter_map equation eq_list in
+  let l_env = diff l_env env in
+  { l with l_eq = eq_list; l_env = l_env }, env
 
-let rec pattern_of_list = function
-  | [] -> pmake (Econstpat Evoid)
-  | [x] -> pmake (Evarpat x)
-  | x :: id_list -> Zaux.pairpat (pmake (Evarpat x)) (pattern_of_list id_list)
+let rec pattern_of_list env = function
+  | [] -> Zaux.pmake (Econstpat Evoid) Initial.typ_unit
+  | [x] -> prob_varpat env x
+  | x :: id_list -> Zaux.pairpat (prob_varpat env x) (pattern_of_list env id_list)
 
 let params ({ e_desc = e_desc } as e) =
   let rec aux { e_desc = e_desc } =
@@ -379,11 +389,14 @@ let complete_params env id_list =
   Zident.Env.fold (fun x _ id_list -> x :: id_list) env []
 
 let distribution_call fun_name e =
-  emake
+  let return_type = Deftypes.no_typ in
+  Zaux.emake
     (Eapp (Zaux.prime_app,
-           emake
-             (Zaux.global (Modname { qual = "Distribution"; id = fun_name })),
+           Zaux.emake
+             (Zaux.global (Modname { qual = "Distribution"; id = fun_name }))
+             (Deftypes.make (Deftypes.Tfun (Tany, None, e.e_typ, return_type))),
            [e]))
+    return_type
 
 let rec dist_of_list env = function
   | [] -> distribution_call "dirac" Zaux.evoid
@@ -399,11 +412,13 @@ let implementation acc impl =
   | Efundecl (n, ({ f_kind = P; f_args = pat_list;
                     f_body = e; f_env = f_env } as body)) ->
      let (e, id_list1), env = return_expression e in
-     let pat1 = pattern_of_list id_list1 in
+     let pat1 = pattern_of_list env id_list1 in
      let dist1 = dist_of_list env id_list1 in
+     let f_env = List.fold_left (fun f_env x -> extra_input env x f_env) f_env id_list1 in
      let id_list2 = complete_params env id_list1 in
-     let pat2 = pattern_of_list id_list2 in
+     let pat2 = pattern_of_list env id_list2 in
      let dist2 = dist_of_list env id_list2 in
+     let f_env = List.fold_left (fun f_env x -> extra_input env x f_env) f_env id_list2 in
      let head, tail = Zmisc.firsts pat_list in
      { impl with desc =
                    Econstdecl ("__" ^ n ^ "_prior",
