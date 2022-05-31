@@ -335,7 +335,7 @@ let params ({ e_desc = e_desc } as e) =
        let id_list = aux e2 in
        assert (List.for_all (fun x' -> Zident.compare x x' <> 0) id_list);
        x :: id_list
-    | _ -> failwith "Too complex"
+    | _ -> failwith "Left part of the pair must be of the form () or x or (x, .. (y, z) ..)"
   in
   match e_desc with
   | Econst Evoid -> []
