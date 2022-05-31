@@ -292,12 +292,6 @@ and equation ({ eq_desc = eq_desc } as eq) =
   | EQinit (x,
             { e_desc =
                 Eapp (_,
-                      { e_desc = Eglobal { lname = Name "sample" } },
-                      [e]) }) ->
-     None, Zident.Env.singleton x e
-  | EQinit (x,
-            { e_desc =
-                Eapp (_,
                       { e_desc =
                           Eglobal { lname = Modname { id = "sample" } } },
                       [e]) }) ->
