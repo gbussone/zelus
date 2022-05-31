@@ -343,22 +343,10 @@ let params ({ e_desc = e_desc } as e) =
 
 let rec return_expression ({ e_desc = e_desc } as e) =
   match e_desc with
-  | Elocal _ -> failwith "Elocal"
-  | Eglobal _ -> failwith "Eglobal"
-  | Econst _ -> failwith "Econst"
-  | Econstr0 _ -> failwith "Econstr0"
-  | Econstr1 _ -> failwith "Econstr1"
-  | Elast _ -> failwith "Elast"
-  | Eapp _ -> failwith "Eapp"
-  | Eop _ -> failwith "Eop"
   | Etuple [e1; e2] ->
      let id_list = params e1 in
      let* e2 = expression e2 in
      return (e2, id_list)
-  | Etuple _ -> failwith "Etuple"
-  | Erecord_access _ -> failwith "Erecord_access"
-  | Erecord _ -> failwith "Erecord"
-  | Erecord_with _ -> failwith "Erecord_with"
   | Etypeconstraint (e', ty) ->
      let* e', id_list = return_expression e' in
      return ({ e with e_desc = Etypeconstraint (e', ty) }, id_list)
@@ -370,12 +358,11 @@ let rec return_expression ({ e_desc = e_desc } as e) =
      let* e1 = expression e1 in
      let* e2, id_list = return_expression e2 in
      return ({ e with e_desc = Eseq (e1, e2) }, id_list)
-  | Eperiod _ -> failwith "Eperiod"
   | Eblock (b, e') ->
      let* b = block b in
      let* e', id_list = return_expression e' in
      return ({ e with e_desc = Eblock (b, e') }, id_list)
-  | Epresent _ | Ematch _ -> assert false
+  | _ -> failwith "Must return a (syntactic) pair"
 
 let complete_params env id_list =
   let env =
