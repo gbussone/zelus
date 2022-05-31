@@ -227,14 +227,9 @@ let option_map f = function
 
 let rec expression ({ e_desc = e_desc } as e) =
   match e_desc with
-  | Elocal _ -> return e
-  | Eglobal _ -> return e
-  | Econst _ -> return e
-  | Econstr0 _ -> return e
   | Econstr1 (c, e_list) ->
      let* e_list = map expression e_list in
      return { e with e_desc = Econstr1 (c, e_list) }
-  | Elast _ -> return e
   | Eapp (app, op, e_list) ->
      let* op = expression op in
      let* e_list = map expression e_list in
@@ -286,6 +281,7 @@ let rec expression ({ e_desc = e_desc } as e) =
      let* b = block b in
      let* e' = expression e' in
      return { e with e_desc = Eblock (b, e') }
+  | Elocal _ | Eglobal _ | Econst _ | Econstr0 _ | Elast _ -> return e
   | Epresent _ | Ematch _ -> assert false
 
 and equation ({ eq_desc = eq_desc } as eq) =
