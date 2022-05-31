@@ -317,7 +317,9 @@ and equation ({ eq_desc = eq_desc } as eq) =
          m_h_list
      in
      return (Some { eq with eq_desc = EQmatch (total, e, m_h_list) })
-  | EQreset _ -> failwith "EQreset"
+  | EQreset (eq_list, e) ->
+     let* e = expression e in
+     return (Some { eq with eq_desc = EQreset (eq_list, e) })
   | EQblock _ -> failwith "EQblock"
   | EQand _ -> failwith "EQand"
   | EQbefore _ -> failwith "EQbefore"
