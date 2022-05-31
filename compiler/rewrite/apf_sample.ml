@@ -314,8 +314,12 @@ and equation ({ eq_desc = eq_desc } as eq) =
   | EQreset (eq_list, e) ->
      let* e = expression e in
      return (Some { eq with eq_desc = EQreset (eq_list, e) })
-  | EQblock _ -> failwith "EQblock"
-  | EQand _ -> failwith "EQand"
+  | EQblock b ->
+     let* b = block b in
+     return (Some { eq with eq_desc = EQblock b })
+  | EQand eq_list ->
+     let* eq_list = filter_map equation eq_list in
+     return (Some { eq with eq_desc = EQand eq_list })
   | EQbefore _ -> failwith "EQbefore"
   | EQforall _ -> failwith "EQforall"
   | EQautomaton _ | EQpresent _ | EQemit _ | EQder _ -> assert false
