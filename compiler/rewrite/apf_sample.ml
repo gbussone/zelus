@@ -264,8 +264,6 @@ let rec expression ({ e_desc = e_desc } as e) =
   | Etypeconstraint (e', ty) ->
      let* e' = expression e' in
      return { e with e_desc = Etypeconstraint (e', ty) }
-  | Epresent _ -> failwith "Epresent"
-  | Ematch _ -> failwith "Ematch"
   | Elet (l, e') ->
      let* l = local l in
      let* e' = expression e' in
@@ -279,13 +277,13 @@ let rec expression ({ e_desc = e_desc } as e) =
      let* b = block b in
      let* e' = expression e' in
      return { e with e_desc = Eblock (b, e') }
+  | Epresent _ | Ematch _ -> assert false
 
 and equation ({ eq_desc = eq_desc } as eq) =
   match eq_desc with
   | EQeq (p, e) ->
      let* e = expression e in
      return (Some { eq with eq_desc = EQeq (p, e) })
-  | EQder _ -> failwith "EQder"
   | EQinit (x,
             { e_desc =
                 Eapp (_,
@@ -304,15 +302,13 @@ and equation ({ eq_desc = eq_desc } as eq) =
      return (Some { eq with eq_desc = EQinit (x, e) })
   | EQnext _ -> failwith "EQnext"
   | EQpluseq _ -> failwith "EQpluseq"
-  | EQautomaton _ -> failwith "EQautomaton"
-  | EQpresent _ -> failwith "EQpresent"
   | EQmatch _ -> failwith "EQmatch"
   | EQreset _ -> failwith "EQreset"
-  | EQemit _ -> failwith "EQemit"
   | EQblock _ -> failwith "EQblock"
   | EQand _ -> failwith "EQand"
   | EQbefore _ -> failwith "EQbefore"
   | EQforall _ -> failwith "EQforall"
+  | EQautomaton _ | EQpresent _ | EQemit _ | EQder _ -> assert false
 
 and block ({ b_locals = l_list; b_body = eq_list } as b) =
   let* l_list = map local l_list in
@@ -364,8 +360,6 @@ let rec return_expression ({ e_desc = e_desc } as e) =
   | Etypeconstraint (e', ty) ->
      let* e', id_list = return_expression e' in
      return ({ e with e_desc = Etypeconstraint (e', ty) }, id_list)
-  | Epresent _ -> failwith "Epresent"
-  | Ematch _ -> failwith "Ematch"
   | Elet (l, e') ->
      let* l = local l in
      let* e', id_list = return_expression e' in
@@ -379,6 +373,7 @@ let rec return_expression ({ e_desc = e_desc } as e) =
      let* b = block b in
      let* e', id_list = return_expression e' in
      return ({ e with e_desc = Eblock (b, e') }, id_list)
+  | Epresent _ | Ematch _ -> assert false
 
 let complete_params env id_list =
   let env =
