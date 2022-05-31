@@ -219,6 +219,12 @@ let rec filter_map f = function
      | None -> return ys
      | Some y -> return (y :: ys)
 
+let option_map f = function
+  | None -> return None
+  | Some x ->
+     let* y = f x in
+     return (Some y)
+
 let rec expression ({ e_desc = e_desc } as e) =
   match e_desc with
   | Elocal _ -> return e
@@ -272,7 +278,10 @@ let rec expression ({ e_desc = e_desc } as e) =
      let* e1 = expression e1 in
      let* e2 = expression e2 in
      return { e with e_desc = Eseq (e1, e2) }
-  | Eperiod _ -> failwith "Eperiod"
+  | Eperiod { p_phase = opt_p1; p_period = p2 } ->
+     let* opt_p1 = option_map expression opt_p1 in
+     let* p2 = expression p2 in
+     return { e with e_desc = Eperiod { p_phase = opt_p1; p_period = p2 } }
   | Eblock (b, e') ->
      let* b = block b in
      let* e' = expression e' in
