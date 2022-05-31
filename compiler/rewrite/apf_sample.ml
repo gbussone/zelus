@@ -289,6 +289,9 @@ and equation ({ eq_desc = eq_desc } as eq) =
   | EQeq (p, e) ->
      let* e = expression e in
      return (Some { eq with eq_desc = EQeq (p, e) })
+  | EQder (x, e, None, []) ->
+     let* e = expression e in
+     return (Some { eq with eq_desc = EQder (x, e, None, []) })
   | EQinit (x,
             { e_desc =
                 Eapp (_,
@@ -300,7 +303,9 @@ and equation ({ eq_desc = eq_desc } as eq) =
      let* e = expression e in
      return (Some { eq with eq_desc = EQinit (x, e) })
   | EQnext _ -> failwith "EQnext"
-  | EQpluseq _ -> failwith "EQpluseq"
+  | EQpluseq (x, e) ->
+     let* e = expression e in
+     return (Some { eq with eq_desc = EQpluseq (x, e) })
   | EQmatch (total, e, m_h_list) ->
      let* e = expression e in
      let* m_h_list =
@@ -320,7 +325,9 @@ and equation ({ eq_desc = eq_desc } as eq) =
   | EQand eq_list ->
      let* eq_list = filter_map equation eq_list in
      return (Some { eq with eq_desc = EQand eq_list })
-  | EQbefore _ -> failwith "EQbefore"
+  | EQbefore eq_list ->
+     let* eq_list = filter_map equation eq_list in
+     return (Some { eq with eq_desc = EQbefore eq_list })
   | EQforall _ -> failwith "EQforall"
   | EQautomaton _ | EQpresent _ | EQemit _ | EQder _ -> assert false
 
