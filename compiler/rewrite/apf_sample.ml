@@ -302,7 +302,16 @@ and equation ({ eq_desc = eq_desc } as eq) =
      return (Some { eq with eq_desc = EQinit (x, e) })
   | EQnext _ -> failwith "EQnext"
   | EQpluseq _ -> failwith "EQpluseq"
-  | EQmatch _ -> failwith "EQmatch"
+  | EQmatch (total, e, m_h_list) ->
+     let* e = expression e in
+     let* m_h_list =
+       map
+         (fun ({ m_body = b } as m_h) ->
+            let* b = block b in
+            return { m_h with m_body = b })
+         m_h_list
+     in
+     return (Some { eq with eq_desc = EQmatch (total, e, m_h_list) })
   | EQreset _ -> failwith "EQreset"
   | EQblock _ -> failwith "EQblock"
   | EQand _ -> failwith "EQand"
