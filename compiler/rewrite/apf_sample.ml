@@ -333,8 +333,10 @@ let params ({ e_desc = e_desc } as e) =
     | Elocal x -> [x]
     | Etuple [{ e_desc = Elocal x }; e2] ->
        let id_list = aux e2 in
-       assert (List.for_all (fun x' -> Zident.compare x x' <> 0) id_list);
-       x :: id_list
+       if List.for_all (fun x' -> Zident.compare x x' <> 0) id_list then
+         x :: id_list
+       else
+         failwith "Each variable can appear at most once in the left part of the pair"
     | _ -> failwith "Left part of the pair must be of the form () or x or (x, .. (y, z) ..)"
   in
   match e_desc with
