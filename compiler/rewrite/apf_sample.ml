@@ -310,10 +310,12 @@ and equation ({ eq_desc = eq_desc } as eq) =
   | EQforall _ -> failwith "EQforall"
   | EQautomaton _ | EQpresent _ | EQemit _ | EQder _ -> assert false
 
-and block ({ b_locals = l_list; b_body = eq_list } as b) =
-  let* l_list = map local l_list in
-  let* eq_list = filter_map equation eq_list in
-  return { b with b_locals = l_list; b_body = eq_list }
+and block ({ b_locals = l_list; b_body = eq_list; b_env = b_env } as b) =
+  let l_list, env1 = map local l_list in
+  let eq_list, env2 = filter_map equation eq_list in
+  let env = union env1 env2 in
+  let b_env = diff b_env env in
+  { b with b_locals = l_list; b_body = eq_list; b_env = b_env }, env
 
 and local ({ l_eq = eq_list; l_env = l_env } as l) =
   let eq_list, env = filter_map equation eq_list in
