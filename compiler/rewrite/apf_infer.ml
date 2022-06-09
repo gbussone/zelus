@@ -56,14 +56,20 @@ let rec expression ({ e_desc = e_desc } as e) =
                     Eglobal
                       { id with
                         lname = rename (Printf.sprintf "__%s_model") lname } };
-                Zaux.pair
-                  { e2 with
-                    e_desc =
-                      Eglobal
-                        { id with
-                          lname =
-                            rename (Printf.sprintf "__%s_prior") lname } }
-                  e3]) }
+                Zaux.tuple
+                  [{ e2 with
+                     e_desc =
+                       Eglobal
+                         { id with
+                           lname =
+                             rename (Printf.sprintf "__%s_prior1") lname } };
+                   { e2 with
+                     e_desc =
+                       Eglobal
+                         { id with
+                           lname =
+                             rename (Printf.sprintf "__%s_prior2") lname } };
+                   e3]]) }
   | Eapp (app, op, e_list) ->
      { e with e_desc = Eapp (app, expression op, List.map expression e_list) }
   | Eop (op, e_list) ->

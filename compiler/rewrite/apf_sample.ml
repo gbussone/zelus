@@ -427,11 +427,8 @@ let implementation acc impl =
      let dist2 = dist_of_list env id_list2 in
      let f_env = List.fold_left (fun f_env x -> extra_input env x f_env) f_env id_list2 in
      let head, tail = Zmisc.firsts pat_list in
-     { impl with desc =
-                   Econstdecl ("__" ^ n ^ "_prior",
-                               false,
-                               distribution_call "of_pair"
-                                 (Zaux.pair dist1 dist2)) }
+     { impl with desc = Econstdecl ("__" ^ n ^ "_prior2", false, dist2) }
+     :: { impl with desc = Econstdecl ("__" ^ n ^ "_prior1", false, dist1) }
      :: { impl with desc =
                       Efundecl("__" ^ n ^ "_model",
                                { body with f_kind = P;
