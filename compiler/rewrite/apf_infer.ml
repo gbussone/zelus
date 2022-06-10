@@ -25,8 +25,6 @@ is translated into:
 
 open Zelus
 
-let emake desc = Zaux.emake desc Deftypes.no_typ
-
 let rename f = function
   | Lident.Name name -> Lident.Name (f name)
   | Lident.Modname ({ id = id } as name) ->
