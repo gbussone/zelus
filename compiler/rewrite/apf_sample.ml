@@ -438,6 +438,6 @@ let implementation acc impl =
                                                   (Zaux.pairpat pat1 pat2)
                                                   tail];
                                            f_body = e; f_env = f_env }) }
-     :: impl :: acc
+     :: acc
 
 let implementation_list impl_list = Zmisc.fold implementation impl_list
