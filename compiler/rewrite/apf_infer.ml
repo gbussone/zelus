@@ -32,6 +32,12 @@ let rename f = function
   | Lident.Modname ({ id = id } as name) ->
      Lident.Modname { name with id = f id }
 
+let rename f ({ e_desc = e_desc } as e) =
+  match e_desc with
+  | Eglobal ({ lname = lname } as id) ->
+     { e with e_desc = Eglobal { id with lname = rename f lname } }
+  | _ -> assert false
+
 let rec expression ({ e_desc = e_desc } as e) =
   match e_desc with
   | Elocal _ -> e
@@ -43,32 +49,16 @@ let rec expression ({ e_desc = e_desc } as e) =
   | Elast _ -> e
   | Eapp (app,
           ({ e_desc = Eglobal { lname = Modname { id = "infer" } } } as op),
-          [e1;
-           ({ e_desc = Eglobal ({ lname = lname } as id) } as e2);
-           e3]) ->
+          [e1; ({ e_desc = Eglobal _ } as e2); e3]) ->
      { e with
        e_desc =
          Eapp (app,
                op,
                [e1;
-                { e2 with
-                  e_desc =
-                    Eglobal
-                      { id with
-                        lname = rename (Printf.sprintf "__%s_model") lname } };
+                rename (Printf.sprintf "__%s_model") e2;
                 Zaux.tuple
-                  [{ e2 with
-                     e_desc =
-                       Eglobal
-                         { id with
-                           lname =
-                             rename (Printf.sprintf "__%s_prior1") lname } };
-                   { e2 with
-                     e_desc =
-                       Eglobal
-                         { id with
-                           lname =
-                             rename (Printf.sprintf "__%s_prior2") lname } };
+                  [rename (Printf.sprintf "__%s_prior1") e2;
+                   rename (Printf.sprintf "__%s_prior2") e2;
                    e3]]) }
   | Eapp (app, op, e_list) ->
      { e with e_desc = Eapp (app, expression op, List.map expression e_list) }
