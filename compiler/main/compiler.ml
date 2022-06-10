@@ -190,6 +190,9 @@ let compile modname filename =
           let impl_list =
             step "Translation of inference calls done. See below:"
                  Apf_infer.implementation_list impl_list in
+          let impl_list =
+            step "Translation of calls done. See below:"
+                 Apf_call.implementation_list impl_list in
           step "Translation of samples done. See below:"
                Apf_sample.implementation_list impl_list
         else impl_list in
