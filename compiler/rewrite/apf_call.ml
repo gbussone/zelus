@@ -78,7 +78,7 @@ and equation ({ eq_desc = eq_desc } as eq) =
   match eq_desc with
   | EQeq ({ p_desc = Etuplepat [{ p_desc = Evarpat z }; p] },
           ({ e_desc = Eapp (app,
-                            ({ e_desc = Eglobal { lname = Modname _ } } as op),
+                            ({ e_desc = Eglobal _ } as op),
                             [obs]) } as e))
     when Ztypes.is_probabilistic 0 op.e_typ ->
      let no_typ () = Ztypes.make Deftypes.Tvar in
