@@ -151,8 +151,10 @@ let compile modname filename =
       (* continue if [typeonly = false] *)
       (* Start of source-to-source translation *)
       let impl_list =
-	step "Mark functions calls to be inlined. See below:"
-	     Markfunctions.implementation_list impl_list in
+        if not !apf
+        then step "Mark functions calls to be inlined. See below:"
+	     Markfunctions.implementation_list impl_list
+        else impl_list in
       let impl_list =
 	step "Reduce static expressions for global values \
               that have no more static parameter. See below:"
