@@ -151,7 +151,7 @@ let compile modname filename =
       (* continue if [typeonly = false] *)
       (* Start of source-to-source translation *)
       let impl_list =
-        if not !apf
+        if not !fm
         then step "Mark functions calls to be inlined. See below:"
 	     Markfunctions.implementation_list impl_list
         else impl_list in
@@ -187,16 +187,16 @@ let compile modname filename =
 	step "Translation of disc done. See below:"
 	     Disc.implementation_list impl_list in
       let impl_list =
-        if !apf
+        if !fm
         then
           let impl_list =
             step "Translation of inference calls done. See below:"
-                 Apf_infer.implementation_list impl_list in
+                 Fm_infer.implementation_list impl_list in
           let impl_list =
             step "Translation of calls done. See below:"
-                 Apf_call.implementation_list impl_list in
+                 Fm_call.implementation_list impl_list in
           step "Translation of samples done. See below:"
-               Apf_sample.implementation_list impl_list
+               Fm_sample.implementation_list impl_list
         else impl_list in
       let impl_list =
 	step "Translation of probabilistic nodes. See below:"

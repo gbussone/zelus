@@ -95,7 +95,7 @@ and doc_zsign = "\t Use the sign function for the zero-crossing argument"
 and doc_with_copy = "\t Add of a copy method for the state"
 and doc_rif = "\t Use RIF format over stdin and stdout to communicate I/O to the node being simulated"
 and doc_deps = "\t Recursively compile dependencies"
-and doc_apf = "\t Transform probabilistic nodes for APF inference"
+and doc_fm = "\t Transform probabilistic nodes for FM inference"
 let errmsg = "Options are:"
 
 let set_verbose () =
@@ -150,7 +150,7 @@ let main () =
           "-lmm", Arg.String set_lmm_nodes, doc_lmm;
           "-rif", Arg.Set use_rif, doc_rif;
           "-deps", Arg.Set build_deps, doc_deps;
-          "-apf", Arg.Set apf, doc_apf;
+          "-fm", Arg.Set fm, doc_fm;
         ])
       (fun filename -> if !build_deps then build filename else compile filename)
       errmsg;
