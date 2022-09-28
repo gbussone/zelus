@@ -297,7 +297,7 @@ and equation ({ eq_desc = eq_desc } as eq) =
                 Eapp (_,
                       { e_desc =
                           Eglobal { lname = Modname { id = "sample" } } },
-                      [{ e_desc = Etuple [e; _] }]) }) ->
+                      [e]) }) ->
      None, Zident.Env.singleton x e
   | EQinit (x, e) ->
      let* e = expression e in

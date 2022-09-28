@@ -195,8 +195,11 @@ let compile modname filename =
           let impl_list =
             step "Translation of calls done. See below:"
                  Fm_call.implementation_list impl_list in
-          step "Translation of samples done. See below:"
-               Fm_sample.implementation_list impl_list
+          let impl_list =
+            step "Translation of samples done. See below:"
+                 Fm_sample.implementation_list impl_list in
+          step "Creation of sample sites done. See below:"
+               Fm_site.implementation_list impl_list
         else impl_list in
       let impl_list =
 	step "Translation of probabilistic nodes. See below:"
