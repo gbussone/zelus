@@ -29,7 +29,7 @@ let gen =
   let c = ref 0 in
   fun () ->
     incr c;
-    Zaux.emake (Econst (Estring (string_of_int !c))) Initial.typ_string
+    Zaux.emake (Econst (Eint !c)) Initial.typ_int
 
 let rec expression ({ e_desc = e_desc } as e) =
   match e_desc with
