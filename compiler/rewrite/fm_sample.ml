@@ -225,121 +225,117 @@ let option_map f = function
      let* y = f x in
      return (Some y)
 
-let rec expression ({ e_desc = e_desc } as e) =
+let rec expression env ({ e_desc = e_desc } as e) =
   match e_desc with
   | Econstr1 (c, e_list) ->
-     let* e_list = map expression e_list in
+     let* e_list = map (expression env) e_list in
      return { e with e_desc = Econstr1 (c, e_list) }
   | Eapp (app, op, e_list) ->
-     let* op = expression op in
-     let* e_list = map expression e_list in
+     let* op = expression env op in
+     let* e_list = map (expression env) e_list in
      return { e with e_desc = Eapp (app, op, e_list) }
   | Eop (op, e_list) ->
-     let* e_list = map expression e_list in
+     let* e_list = map (expression env) e_list in
      return { e with e_desc = Eop (op, e_list) }
   | Etuple e_list ->
-     let* e_list = map expression e_list in
+     let* e_list = map (expression env) e_list in
      return { e with e_desc = Etuple e_list }
   | Erecord_access (e_record, x) ->
-     let* e_record = expression e_record in
+     let* e_record = expression env e_record in
      return { e with e_desc = Erecord_access (e_record, x) }
   | Erecord l_e_list ->
      let* l_e_list =
        map
          (fun (l, e) ->
-            let* e = expression e in
+            let* e = expression env e in
             return (l, e))
          l_e_list
      in
      return { e with e_desc = Erecord l_e_list }
   | Erecord_with (e_record, l_e_list) ->
-     let* e_record = expression e_record in
+     let* e_record = expression env e_record in
      let* l_e_list =
        map
          (fun (l, e) ->
-            let* e = expression e in
+            let* e = expression env e in
             return (l, e))
          l_e_list
      in
      return { e with e_desc = Erecord_with (e_record, l_e_list) }
   | Etypeconstraint (e', ty) ->
-     let* e' = expression e' in
+     let* e' = expression env e' in
      return { e with e_desc = Etypeconstraint (e', ty) }
   | Elet (l, e') ->
-     let* l = local l in
-     let* e' = expression e' in
+     let* l = local env l in
+     let* e' = expression env e' in
      return { e with e_desc = Elet (l, e') }
   | Eseq (e1, e2) ->
-     let* e1 = expression e1 in
-     let* e2 = expression e2 in
+     let* e1 = expression env e1 in
+     let* e2 = expression env e2 in
      return { e with e_desc = Eseq (e1, e2) }
   | Eperiod { p_phase = opt_p1; p_period = p2 } ->
-     let* opt_p1 = option_map expression opt_p1 in
-     let* p2 = expression p2 in
+     let* opt_p1 = option_map (expression env) opt_p1 in
+     let* p2 = expression env p2 in
      return { e with e_desc = Eperiod { p_phase = opt_p1; p_period = p2 } }
   | Eblock (b, e') ->
-     let* b = block b in
-     let* e' = expression e' in
+     let* b = block env b in
+     let* e' = expression env e' in
      return { e with e_desc = Eblock (b, e') }
   | Elocal _ | Eglobal _ | Econst _ | Econstr0 _ | Elast _ -> return e
   | Epresent _ | Ematch _ -> assert false
 
-and equation ({ eq_desc = eq_desc } as eq) =
+and equation env ({ eq_desc = eq_desc } as eq) =
   match eq_desc with
   | EQeq (p, e) ->
-     let* e = expression e in
+     let* e = expression env e in
      return (Some { eq with eq_desc = EQeq (p, e) })
   | EQder (x, e, None, []) ->
-     let* e = expression e in
+     let* e = expression env e in
      return (Some { eq with eq_desc = EQder (x, e, None, []) })
-  | EQinit (x,
-            { e_desc =
-                Eapp (_,
-                      { e_desc =
-                          Eglobal { lname = Modname { id = "sample" } } },
-                      [e]) }) ->
-     None, Zident.Env.singleton x e
   | EQinit (x, e) ->
-     let* e = expression e in
-     return (Some { eq with eq_desc = EQinit (x, e) })
+     if Zident.Env.mem x env then
+       None, Zident.Env.singleton x (Zident.Env.find x env)
+     else
+       let* e = expression env e in
+       return (Some { eq with eq_desc = EQinit (x, e) })
   | EQnext _ -> failwith "EQnext"
   | EQpluseq (x, e) ->
-     let* e = expression e in
+     let* e = expression env e in
      return (Some { eq with eq_desc = EQpluseq (x, e) })
   | EQmatch (total, e, m_h_list) ->
-     let* e = expression e in
+     let* e = expression env e in
      let* m_h_list =
        map
          (fun ({ m_body = b } as m_h) ->
-            let* b = block b in
+            let* b = block env b in
             return { m_h with m_body = b })
          m_h_list
      in
      return (Some { eq with eq_desc = EQmatch (total, e, m_h_list) })
   | EQreset (eq_list, e) ->
-     let* e = expression e in
+     let* e = expression env e in
      return (Some { eq with eq_desc = EQreset (eq_list, e) })
   | EQblock b ->
-     let* b = block b in
+     let* b = block env b in
      return (Some { eq with eq_desc = EQblock b })
   | EQand eq_list ->
-     let* eq_list = filter_map equation eq_list in
+     let* eq_list = filter_map (equation env) eq_list in
      return (Some { eq with eq_desc = EQand eq_list })
   | EQbefore eq_list ->
-     let* eq_list = filter_map equation eq_list in
+     let* eq_list = filter_map (equation env) eq_list in
      return (Some { eq with eq_desc = EQbefore eq_list })
   | EQforall _ -> failwith "EQforall"
   | EQautomaton _ | EQpresent _ | EQemit _ | EQder _ -> assert false
 
-and block ({ b_locals = l_list; b_body = eq_list; b_env = b_env } as b) =
-  let l_list, env1 = map local l_list in
-  let eq_list, env2 = filter_map equation eq_list in
+and block env ({ b_locals = l_list; b_body = eq_list; b_env = b_env } as b) =
+  let l_list, env1 = map (local env) l_list in
+  let eq_list, env2 = filter_map (equation env) eq_list in
   let env = union env1 env2 in
   let b_env = diff b_env env in
   { b with b_locals = l_list; b_body = eq_list; b_env = b_env }, env
 
-and local ({ l_eq = eq_list; l_env = l_env } as l) =
-  let eq_list, env = filter_map equation eq_list in
+and local env ({ l_eq = eq_list; l_env = l_env } as l) =
+  let eq_list, env = filter_map (equation env) eq_list in
   let l_env = diff l_env env in
   { l with l_eq = eq_list; l_env = l_env }, env
 
@@ -364,26 +360,26 @@ let params ({ e_desc = e_desc } as e) =
   | Econst Evoid -> []
   | _ -> aux e
 
-let rec return_expression ({ e_desc = e_desc } as e) =
+let rec return_expression env ({ e_desc = e_desc } as e) =
   match e_desc with
   | Etuple [e1; e2] ->
      let id_list = params e1 in
-     let* e2 = expression e2 in
+     let* e2 = expression env e2 in
      return (e2, id_list)
   | Etypeconstraint (e', ty) ->
-     let* e', id_list = return_expression e' in
+     let* e', id_list = return_expression env e' in
      return ({ e with e_desc = Etypeconstraint (e', ty) }, id_list)
   | Elet (l, e') ->
-     let* l = local l in
-     let* e', id_list = return_expression e' in
+     let* l = local env l in
+     let* e', id_list = return_expression env e' in
      return ({ e with e_desc = Elet (l, e') }, id_list)
   | Eseq (e1, e2) ->
-     let* e1 = expression e1 in
-     let* e2, id_list = return_expression e2 in
+     let* e1 = expression env e1 in
+     let* e2, id_list = return_expression env e2 in
      return ({ e with e_desc = Eseq (e1, e2) }, id_list)
   | Eblock (b, e') ->
-     let* b = block b in
-     let* e', id_list = return_expression e' in
+     let* b = block env b in
+     let* e', id_list = return_expression env e' in
      return ({ e with e_desc = Eblock (b, e') }, id_list)
   | _ -> failwith "Must return a (syntactic) pair"
 
@@ -418,7 +414,9 @@ let implementation acc impl =
   | Efundecl (_, { f_kind = (S | AS | A | AD | D | C) }) -> impl :: acc
   | Efundecl (n, ({ f_kind = P; f_args = pat_list;
                     f_body = e; f_env = f_env } as body)) ->
-     let (e, id_list1), env = return_expression e in
+     let env = Fm_cst.expression e in
+     let env = Zident.Env.filter_map (fun _ -> Fm_proba.expression) env in
+     let (e, id_list1), env = return_expression env e in
      let pat1 = pattern_of_list env id_list1 in
      let dist1 = dist_of_list env id_list1 in
      let f_env = List.fold_left (fun f_env x -> extra_input env x f_env) f_env id_list1 in
