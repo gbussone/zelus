@@ -294,7 +294,7 @@ and equation ({ eq_desc = eq_desc } as eq) =
        else
          (let* e = expression e in
           return (Some { eq with eq_desc = EQinit (x, e) })) env
-  | EQnext _ -> failwith "EQnext"
+  | EQnext _ -> failwith "EQnext" (* TODO *)
   | EQpluseq (x, e) ->
      let* e = expression e in
      return (Some { eq with eq_desc = EQpluseq (x, e) })
@@ -308,7 +308,7 @@ and equation ({ eq_desc = eq_desc } as eq) =
          m_h_list
      in
      return (Some { eq with eq_desc = EQmatch (total, e, m_h_list) })
-  | EQreset (eq_list, e) ->
+  | EQreset (eq_list, e) -> (* TODO *)
      let* e = expression e in
      return (Some { eq with eq_desc = EQreset (eq_list, e) })
   | EQblock b ->
@@ -320,7 +320,7 @@ and equation ({ eq_desc = eq_desc } as eq) =
   | EQbefore eq_list ->
      let* eq_list = filter_map equation eq_list in
      return (Some { eq with eq_desc = EQbefore eq_list })
-  | EQforall _ -> failwith "EQforall"
+  | EQforall _ -> failwith "EQforall" (* TODO *)
   | EQautomaton _ | EQpresent _ | EQemit _ | EQder _ -> assert false
 
 and block ({ b_locals = l_list; b_body = eq_list; b_env = b_env } as b) =
