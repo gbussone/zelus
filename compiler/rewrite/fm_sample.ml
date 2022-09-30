@@ -188,19 +188,14 @@ let prob_var env x = Zaux.var x (typ_prob env x)
 let extra_input env x f_env =
   Zident.Env.add x { Deftypes.t_sort = Deftypes.value; Deftypes.t_typ = typ_prob env x } f_env
 
-let union env1 env2 =
-  Zident.Env.union
-    (fun _ _ _ -> failwith "init sample is used twice with the same name")
-    env1 env2
-
 let diff env1 env2 =
   Zident.Env.filter (fun k _ -> not (Zident.Env.mem k env2)) env1
 
-let return x = x, Zident.Env.empty
+let return x = x
 let bind e f =
-  let x, env1 = e in
-  let y, env2 = f x in
-  y, union env1 env2
+  let x = e in
+  let y = f x in
+  y
 let ( let* ) = bind
 
 let rec map f = function
@@ -294,7 +289,7 @@ and equation env ({ eq_desc = eq_desc } as eq) =
      return (Some { eq with eq_desc = EQder (x, e, None, []) })
   | EQinit (x, e) ->
      if Zident.Env.mem x env then
-       None, Zident.Env.singleton x (Zident.Env.find x env)
+       None
      else
        let* e = expression env e in
        return (Some { eq with eq_desc = EQinit (x, e) })
@@ -328,16 +323,15 @@ and equation env ({ eq_desc = eq_desc } as eq) =
   | EQautomaton _ | EQpresent _ | EQemit _ | EQder _ -> assert false
 
 and block env ({ b_locals = l_list; b_body = eq_list; b_env = b_env } as b) =
-  let l_list, env1 = map (local env) l_list in
-  let eq_list, env2 = filter_map (equation env) eq_list in
-  let env = union env1 env2 in
+  let l_list = map (local env) l_list in
+  let eq_list = filter_map (equation env) eq_list in
   let b_env = diff b_env env in
-  { b with b_locals = l_list; b_body = eq_list; b_env = b_env }, env
+  { b with b_locals = l_list; b_body = eq_list; b_env = b_env }
 
 and local env ({ l_eq = eq_list; l_env = l_env } as l) =
-  let eq_list, env = filter_map (equation env) eq_list in
+  let eq_list = filter_map (equation env) eq_list in
   let l_env = diff l_env env in
-  { l with l_eq = eq_list; l_env = l_env }, env
+  { l with l_eq = eq_list; l_env = l_env }
 
 let rec pattern_of_list env = function
   | [] -> Zaux.pmake (Econstpat Evoid) Initial.typ_unit
@@ -416,7 +410,7 @@ let implementation acc impl =
                     f_body = e; f_env = f_env } as body)) ->
      let env = Fm_cst.expression e in
      let env = Zident.Env.filter_map (fun _ -> Fm_proba.expression) env in
-     let (e, id_list1), env = return_expression env e in
+     let e, id_list1 = return_expression env e in
      let pat1 = pattern_of_list env id_list1 in
      let dist1 = dist_of_list env id_list1 in
      let f_env = List.fold_left (fun f_env x -> extra_input env x f_env) f_env id_list1 in
