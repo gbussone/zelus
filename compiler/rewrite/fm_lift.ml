@@ -33,9 +33,9 @@ let rec expression e =
   | Econstr0 _ -> true
   | Econstr1 (_, e_list) -> List.for_all expression e_list
   | Elast _ -> false
-  | Eapp (_, op, [obs]) when not (Ztypes.is_probabilistic 0 op.e_typ) ->
-     expression obs
-  | Eapp _ -> false
+  | Eapp (_, op, e_list) ->
+     not (Ztypes.is_probabilistic (List.length e_list - 1) op.e_typ) &&
+     List.for_all expression e_list
   | Eop (_, e_list) -> List.for_all expression e_list
   | Etuple e_list -> List.for_all expression e_list
   | Erecord_access (e, _) -> expression e
