@@ -16,11 +16,11 @@
 
 (* every call to an inference function:
 
-   [Infer.infer fm_params (model, obs)]
+   [Infer.infer apf_params (model, obs)]
 
 is translated into:
 
-   [Infer.infer fm_params (Infer.mk_model model, obs)]
+   [Infer.infer apf_params (Infer.mk_model model, obs)]
  *)
 
 open Zelus

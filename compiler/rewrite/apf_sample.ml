@@ -411,9 +411,9 @@ let implementation acc impl =
   | Efundecl (_, { f_kind = (S | AS | A | AD | D | C) }) -> impl :: acc
   | Efundecl (n, ({ f_kind = P; f_args = pat_list;
                     f_body = e; f_env = f_env } as body)) ->
-     let env = Fm_cst.expression e in
-     let env = Zident.Env.filter_map (fun _ -> Fm_proba.expression) env in
-     let env = Zident.Env.filter (fun _ -> Fm_lift.expression) env in
+     let env = Apf_cst.expression e in
+     let env = Zident.Env.filter_map (fun _ -> Apf_proba.expression) env in
+     let env = Zident.Env.filter (fun _ -> Apf_lift.expression) env in
      let e, id_list1 = return_expression e env in
      let pat1 = pattern_of_list env id_list1 in
      let dist1 = dist_of_list env id_list1 in
