@@ -81,6 +81,14 @@ and equation ({ eq_desc = eq_desc } as eq) =
                             ({ e_desc = Eglobal _ } as op),
                             [obs]) } as e))
     when Ztypes.is_probabilistic 0 op.e_typ ->
+     let rename f =
+       rename
+         (fun id ->
+            assert (id <> "factor");
+            assert (id <> "observe");
+            assert (id <> "sample");
+            f id)
+     in
      let no_typ () = Ztypes.make Deftypes.Tvar in
      let aux = Zident.fresh "aux" in
      let init_sample var =
@@ -100,18 +108,20 @@ and equation ({ eq_desc = eq_desc } as eq) =
                                    [no_typ ()] }]))
                      (no_typ ())) }
      in
-     { eq with
-       eq_desc =
-         EQand [init_sample aux;
-                { eq with
-                  eq_desc =
-                    EQeq (p,
-                          { e with
-                            e_desc =
-                              Eapp (app,
-                                    rename (Printf.sprintf "__%s_model") op,
-                                    [Zaux.pair (Zaux.var aux (no_typ ()))
-                                       obs]) }) }] }
+     begin try
+       { eq with
+         eq_desc =
+           EQand [init_sample aux;
+                  { eq with
+                    eq_desc =
+                      EQeq (p,
+                            { e with
+                              e_desc =
+                                Eapp (app,
+                                      rename (Printf.sprintf "__%s_model") op,
+                                      [Zaux.pair (Zaux.var aux (no_typ ()))
+                                         obs]) }) }] }
+     with _ -> { eq with eq_desc = EQeq (p, expression e) } end
   | EQeq (p, e) -> { eq with eq_desc = EQeq (p, expression e) }
   | EQder (x, e, e_opt, e_ph_list) ->
      let e_opt = Option.map expression e_opt in
