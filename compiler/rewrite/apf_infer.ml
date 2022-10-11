@@ -54,10 +54,7 @@ let rec expression ({ e_desc = e_desc } as e) =
                op,
                [e1;
                 rename (Printf.sprintf "__%s_model") e2;
-                Zaux.tuple
-                  [rename (Printf.sprintf "__%s_prior1") e2;
-                   rename (Printf.sprintf "__%s_prior2") e2;
-                   e3]]) }
+                Zaux.tuple [rename (Printf.sprintf "__%s_prior") e2; e3]]) }
   | Eapp (app, op, e_list) ->
      { e with e_desc = Eapp (app, expression op, List.map expression e_list) }
   | Eop (op, e_list) ->

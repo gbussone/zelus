@@ -341,34 +341,6 @@ let rec pattern_of_list env = function
   | [x] -> prob_varpat env x
   | x :: id_list -> Zaux.pairpat (prob_varpat env x) (pattern_of_list env id_list)
 
-let params ({ e_desc = e_desc } as e) =
-  match e_desc with
-  | Econst Evoid -> []
-  | _ -> failwith "Left part of the pair must be ()"
-
-let rec return_expression ({ e_desc = e_desc } as e) =
-  match e_desc with
-  | Etuple [e1; e2] ->
-     let id_list = params e1 in
-     let* e2 = expression e2 in
-     return (e2, id_list)
-  | Etypeconstraint (e', ty) ->
-     let* e', id_list = return_expression e' in
-     return ({ e with e_desc = Etypeconstraint (e', ty) }, id_list)
-  | Elet (l, e') ->
-     let* l = local l in
-     let* e', id_list = return_expression e' in
-     return ({ e with e_desc = Elet (l, e') }, id_list)
-  | Eseq (e1, e2) ->
-     let* e1 = expression e1 in
-     let* e2, id_list = return_expression e2 in
-     return ({ e with e_desc = Eseq (e1, e2) }, id_list)
-  | Eblock (b, e') ->
-     let* b = block b in
-     let* e', id_list = return_expression e' in
-     return ({ e with e_desc = Eblock (b, e') }, id_list)
-  | _ -> failwith "Must return a (syntactic) pair"
-
 let complete_params env id_list =
   let env =
     Zident.Env.filter
@@ -403,25 +375,19 @@ let implementation acc impl =
      let env = Apf_cst.expression e in
      let env = Zident.Env.filter_map (fun _ -> Apf_proba.expression) env in
      let env = Zident.Env.filter (fun _ -> Apf_lift.expression) env in
-     let e, id_list1 = return_expression e env in
-     let pat1 = pattern_of_list env id_list1 in
-     let dist1 = dist_of_list env id_list1 in
-     let f_env = List.fold_left (fun f_env x -> extra_input env x f_env) f_env id_list1 in
-     let id_list2 = complete_params env id_list1 in
-     let pat2 = pattern_of_list env id_list2 in
-     let dist2 = dist_of_list env id_list2 in
-     let f_env = List.fold_left (fun f_env x -> extra_input env x f_env) f_env id_list2 in
+     let e = expression e env in
+     let id_list = complete_params env [] in
+     let pat = pattern_of_list env id_list in
+     let dist = dist_of_list env id_list in
+     let f_env = List.fold_left (fun f_env x -> extra_input env x f_env) f_env id_list in
      let head, tail = Zmisc.firsts pat_list in
-     { impl with desc = Econstdecl ("__" ^ n ^ "_prior2", false, dist2) }
-     :: { impl with desc = Econstdecl ("__" ^ n ^ "_prior1", false, dist1) }
+     { impl with desc = Econstdecl ("__" ^ n ^ "_prior", false, dist) }
      :: { impl with desc =
                       Efundecl("__" ^ n ^ "_model",
                                { body with f_kind = P;
                                            f_args =
                                              head
-                                             @ [Zaux.pairpat
-                                                  (Zaux.pairpat pat1 pat2)
-                                                  tail];
+                                             @ [Zaux.pairpat pat tail];
                                            f_body = e; f_env = f_env }) }
      :: acc
 

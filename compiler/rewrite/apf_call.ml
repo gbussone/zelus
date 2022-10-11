@@ -76,14 +76,14 @@ and period { p_phase = phase_opt; p_period = period } =
 
 and equation ({ eq_desc = eq_desc } as eq) =
   match eq_desc with
-  | EQeq ({ p_desc = Etuplepat [{ p_desc = Evarpat z }; p] },
+  | EQeq (p,
           ({ e_desc = Eapp (app,
                             ({ e_desc = Eglobal _ } as op),
                             [obs]) } as e))
     when Ztypes.is_probabilistic 0 op.e_typ ->
      let no_typ () = Ztypes.make Deftypes.Tvar in
      let aux = Zident.fresh "aux" in
-     let init_sample var i =
+     let init_sample var =
        { eq with
          eq_desc =
            EQinit (var,
@@ -93,9 +93,7 @@ and equation ({ eq_desc = eq_desc } as eq) =
                               (Zaux.global
                                  (Modname { qual = ""; id = "sample" }))
                               (no_typ ()),
-                            [{ (rename
-                                  (fun s -> Printf.sprintf "__%s_prior%d" s i)
-                                  op) with
+                            [{ (rename (Printf.sprintf "__%s_prior") op) with
                                e_typ =
                                  Initial.constr
                                    { qual = "Distribution"; id = "t" }
@@ -104,8 +102,7 @@ and equation ({ eq_desc = eq_desc } as eq) =
      in
      { eq with
        eq_desc =
-         EQand [init_sample z 1;
-                init_sample aux 2;
+         EQand [init_sample aux;
                 { eq with
                   eq_desc =
                     EQeq (p,
@@ -113,9 +110,7 @@ and equation ({ eq_desc = eq_desc } as eq) =
                             e_desc =
                               Eapp (app,
                                     rename (Printf.sprintf "__%s_model") op,
-                                    [Zaux.pair
-                                       (Zaux.pair (Zaux.var z (no_typ ()))
-                                          (Zaux.var aux (no_typ ())))
+                                    [Zaux.pair (Zaux.var aux (no_typ ()))
                                        obs]) }) }] }
   | EQeq (p, e) -> { eq with eq_desc = EQeq (p, expression e) }
   | EQder (x, e, e_opt, e_ph_list) ->
