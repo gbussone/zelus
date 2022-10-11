@@ -342,20 +342,9 @@ let rec pattern_of_list env = function
   | x :: id_list -> Zaux.pairpat (prob_varpat env x) (pattern_of_list env id_list)
 
 let params ({ e_desc = e_desc } as e) =
-  let rec aux { e_desc = e_desc } =
-    match e_desc with
-    | Elocal x -> [x]
-    | Etuple [{ e_desc = Elocal x }; e2] ->
-       let id_list = aux e2 in
-       if List.for_all (fun x' -> Zident.compare x x' <> 0) id_list then
-         x :: id_list
-       else
-         failwith "Each variable can appear at most once in the left part of the pair"
-    | _ -> failwith "Left part of the pair must be of the form () or x or (x, .. (y, z) ..)"
-  in
   match e_desc with
   | Econst Evoid -> []
-  | _ -> aux e
+  | _ -> failwith "Left part of the pair must be ()"
 
 let rec return_expression ({ e_desc = e_desc } as e) =
   match e_desc with
